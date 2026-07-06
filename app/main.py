@@ -350,16 +350,40 @@ st.markdown("### 📤 Cargar imagen del vehículo")
 col_upload, col_info = st.columns([2, 1])
 
 with col_upload:
-    archivo_subido = st.file_uploader(
-        label="Arrastra o selecciona una imagen",
-        type=["jpg", "jpeg", "png", "bmp", "webp"],
-        help="Formatos soportados: JPG, JPEG, PNG, BMP, WEBP",
-        label_visibility="collapsed",
-    )
-    if modo_demo and archivo_subido is None:
+    tab_subir, tab_camara = st.tabs(["📁 Subir Archivo", "📷 Usar Cámara"])
+    
+    archivo_subido = None
+    captura_camara = None
+    
+    with tab_subir:
+        archivo_subido = st.file_uploader(
+            label="Arrastra o selecciona una imagen",
+            type=["jpg", "jpeg", "png", "bmp", "webp"],
+            help="Formatos soportados: JPG, JPEG, PNG, BMP, WEBP",
+            label_visibility="collapsed",
+        )
+        
+    with tab_camara:
+        captura_camara = st.camera_input(
+            "Toma una foto de los daños del vehículo",
+            label_visibility="collapsed",
+        )
+        
+    # Consolidar entrada
+    imagen_a_procesar = None
+    nombre_archivo = "imagen"
+    
+    if archivo_subido is not None:
+        imagen_a_procesar = archivo_subido
+        nombre_archivo = archivo_subido.name
+    elif captura_camara is not None:
+        imagen_a_procesar = captura_camara
+        nombre_archivo = "captura_camara.png"
+
+    if modo_demo and imagen_a_procesar is None:
         usar_demo_directo = st.button(
             "🧪 Probar con detecciones de ejemplo (sin imagen)",
-            width="stretch",
+            use_container_width=True,
         )
     else:
         usar_demo_directo = False
@@ -501,13 +525,18 @@ def renderizar_resultados(img_original, img_anotada, detecciones, nombre_archivo
 # ============================================================
 # Lógica principal: imagen real o demo
 # ============================================================
-if archivo_subido is not None:
+if imagen_a_procesar is not None:
     st.divider()
 
+    # Obtener extensión o usar .png para la cámara
+    sufijo = Path(nombre_archivo).suffix if nombre_archivo else ".png"
+    if not sufijo:
+        sufijo = ".png"
+
     with tempfile.NamedTemporaryFile(
-        delete=False, suffix=Path(archivo_subido.name).suffix
+        delete=False, suffix=sufijo
     ) as tmp:
-        tmp.write(archivo_subido.read())
+        tmp.write(imagen_a_procesar.read())
         ruta_temp = tmp.name
 
     try:
@@ -535,12 +564,12 @@ if archivo_subido is not None:
 
         renderizar_resultados(
             img_original, img_anotada, detecciones,
-            nombre_archivo=Path(archivo_subido.name).stem
+            nombre_archivo=Path(nombre_archivo).stem
         )
 
     except VehicleNotFoundError as e:
         st.warning(f"🚫 {e}")
-        st.info("💡 Si es una foto de detalle (puerta, capot, parachoques), activa el toggle **🔍 Foto de detalle / close-up** en la barra lateral.")
+        st.info("💡 El sistema requiere detectar al menos parte del vehículo (puerta, parachoques, capó, etc.). Asegúrate de que la foto esté bien enfocada.")
     except Exception as e:
         st.error(f"❌ Error inesperado: {e}")
     finally:
