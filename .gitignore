@@ -5,9 +5,9 @@
 # Variables de entorno (¡nunca subir API keys!)
 .env
 
-# Modelo entrenado (archivo grande, se descarga de Colab)
-models/best.pt
-models/*.pt
+# Modelo entrenado (se permite subir best.pt para facilidad de despliegue)
+# models/best.pt
+# models/*.pt
 models/*.onnx
 
 # Datasets sin procesar (demasiado grandes para Git)
