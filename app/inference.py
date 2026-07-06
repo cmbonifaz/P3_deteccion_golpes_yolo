@@ -44,7 +44,7 @@ _modelo_general = None  # YOLOv8n entrenado en COCO (validación de vehículos)
 # Clases de vehículos en el dataset COCO
 # car=2, motorcycle=3, airplane=4, bus=5, train=6, truck=7, boat=8
 VEHICLE_CLASS_IDS = {2, 3, 5, 7}  # car, motorcycle, bus, truck
-VEHICLE_CONF_MIN  = 0.30          # umbral bajo para no descartar autos poco visibles
+VEHICLE_CONF_MIN  = 0.15          # umbral bajo para detectar vehículos parcialmente visibles
 
 
 def cargar_modelo() -> YOLO:
@@ -97,44 +97,39 @@ def validar_vehiculo(ruta_imagen: str) -> bool:
     return False
 
 
-def detectar_danos(ruta_imagen: str, conf_umbral: float = CONF_DEFAULT, skip_vehicle_check: bool = False) -> tuple:
+def detectar_danos(ruta_imagen: str, conf_umbral: float = CONF_DEFAULT) -> tuple:
     """
-    Ejecuta inferencia YOLO sobre una imagen y retorna los resultados.
+    Ejecuta inferencia YOLO con validación de vehículo primero (COCO).
+
+    Flujo:
+        1. Verifica con YOLOv8n (COCO) si hay vehículo en la imagen.
+           - Si no hay vehículo → lanza VehicleNotFoundError (rechaza perros, personas, etc.)
+           - Si hay vehículo    → continúa
+        2. Corre el modelo de daños especializado.
+        3. Retorna imagen anotada + lista de detecciones (puede ser vacía si no hay daños).
 
     Args:
         ruta_imagen (str): Ruta al archivo de imagen (.jpg, .png, etc.)
-        conf_umbral (float): Umbral mínimo de confianza (0.0 - 1.0)
-        skip_vehicle_check (bool): Si True, omite la validación de vehículo
-                                   (usar para fotos de detalle/close-up)
+        conf_umbral (float): Umbral mínimo de confianza para detección de daños (0.0 - 1.0)
 
     Returns:
         tuple: (imagen_anotada_rgb, lista_detecciones)
-            - imagen_anotada_rgb: np.ndarray en formato RGB con bounding boxes dibujadas
-            - lista_detecciones: lista de dicts con keys:
-                {
-                    "clase": str,
-                    "clase_legible": str,
-                    "confianza": float,
-                    "zona": str,
-                    "coordenadas": {"x1", "y1", "x2", "y2"}
-                }
 
     Raises:
         FileNotFoundError: Si el modelo best.pt no existe.
         ValueError: Si la imagen no puede ser cargada.
-        VehicleNotFoundError: Si no se detecta vehículo y skip_vehicle_check es False.
+        VehicleNotFoundError: Si no se detecta ningún vehículo en la imagen.
     """
-    # --- Etapa 1: Validar que la imagen contenga un vehículo ---
-    if not skip_vehicle_check and not validar_vehiculo(ruta_imagen):
+    # ── Etapa 1: Validar vehículo con COCO ───────────────────────────────────
+    if not validar_vehiculo(ruta_imagen):
         raise VehicleNotFoundError(
             "No se detectó un vehículo en la imagen.\n"
             "Por favor sube una fotografía de un automóvil, camioneta, moto o bus."
         )
 
-    # --- Etapa 2: Detectar daños con el modelo especializado ---
+    # ── Etapa 2: Detectar daños con el modelo especializado ──────────────────
     modelo = cargar_modelo()
 
-    # Validar que la imagen exista y sea legible
     img_path = Path(ruta_imagen)
     if not img_path.exists():
         raise ValueError(f"Imagen no encontrada: {ruta_imagen}")
@@ -145,46 +140,37 @@ def detectar_danos(ruta_imagen: str, conf_umbral: float = CONF_DEFAULT, skip_veh
 
     alto_img, ancho_img = img_cv.shape[:2]
 
-    # Ejecutar inferencia
     results = modelo.predict(
         source=str(ruta_imagen),
         conf=conf_umbral,
         verbose=False,
     )
-
     result = results[0]
 
-    # Imagen anotada con bounding boxes (YOLOv8 la genera en BGR)
     imagen_anotada_bgr = result.plot()
     imagen_anotada_rgb = cv2.cvtColor(imagen_anotada_bgr, cv2.COLOR_BGR2RGB)
 
-    # Extraer detecciones estructuradas
     detecciones = []
     for box in result.boxes:
-        clase_id = int(box.cls[0])
-        clase = modelo.names[clase_id]
+        clase_id  = int(box.cls[0])
+        clase     = modelo.names[clase_id]
         confianza = float(box.conf[0])
         x1, y1, x2, y2 = [float(v) for v in box.xyxy[0].tolist()]
-
         zona = obtener_zona(x1, y1, x2, y2, ancho_img, alto_img)
-
         detecciones.append({
-            "clase": clase,
+            "clase":         clase,
             "clase_legible": nombre_clase_legible(clase),
-            "confianza": round(confianza, 4),
-            "zona": zona,
-            "coordenadas": {
-                "x1": round(x1, 1),
-                "y1": round(y1, 1),
-                "x2": round(x2, 1),
-                "y2": round(y2, 1),
+            "confianza":     round(confianza, 4),
+            "zona":          zona,
+            "coordenadas":   {
+                "x1": round(x1, 1), "y1": round(y1, 1),
+                "x2": round(x2, 1), "y2": round(y2, 1),
             },
         })
 
-    # Ordenar por confianza descendente
     detecciones.sort(key=lambda d: d["confianza"], reverse=True)
-
     return imagen_anotada_rgb, detecciones
+
 
 
 def imagen_original_rgb(ruta_imagen: str) -> np.ndarray:

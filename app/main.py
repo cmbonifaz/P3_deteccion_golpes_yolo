@@ -356,12 +356,6 @@ with col_upload:
         help="Formatos soportados: JPG, JPEG, PNG, BMP, WEBP",
         label_visibility="collapsed",
     )
-    foto_detalle = st.toggle(
-        "🔍 Foto de detalle / close-up",
-        value=False,
-        help="¿La foto es de una parte del vehículo (puerta, capó, parachoques) "
-             "sin mostrar el auto completo? Actívalo para saltarse la validación automática.",
-    )
     if modo_demo and archivo_subido is None:
         usar_demo_directo = st.button(
             "🧪 Probar con detecciones de ejemplo (sin imagen)",
@@ -537,7 +531,6 @@ if archivo_subido is not None:
                 img_anotada, detecciones = detectar_danos(
                     ruta_temp,
                     conf_umbral=conf_threshold,
-                    skip_vehicle_check=foto_detalle,
                 )
 
         renderizar_resultados(
