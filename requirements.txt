@@ -1,0 +1,20 @@
+# =========================================================
+# Sistema de Detección de Daños en Vehículos — Dependencias
+# =========================================================
+
+# Core YOLO (incluye PyTorch automáticamente)
+ultralytics>=8.3.0
+
+# Procesamiento de imágenes
+opencv-python>=4.9.0
+Pillow>=10.0.0
+numpy>=1.26.0
+
+# Interfaz de usuario
+streamlit>=1.35.0
+
+# Capa de IA explicativa (Groq)
+groq>=0.9.0
+
+# Variables de entorno
+python-dotenv>=1.0.0

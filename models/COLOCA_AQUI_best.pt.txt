@@ -1,0 +1,6 @@
+Carpeta para los modelos entrenados.
+
+Coloca aquí el archivo best.pt que descargaste desde Google Colab.
+
+Este archivo NO se incluye en Git por su tamaño.
+Ver README.md para instrucciones de entrenamiento.

@@ -1,0 +1,30 @@
+[
+  {
+    "caso": "Sin daños (lista vacía)",
+    "esperado": "Sin daños",
+    "obtenido": "Sin daños",
+    "ok": true,
+    "justificacion": "No se detectaron daños visibles en el vehículo. La imagen no muestra evidencia de daños que el modelo pueda identificar con el umbral de confianza actual."
+  },
+  {
+    "caso": "Daño leve (1 rayón)",
+    "esperado": "Leve",
+    "obtenido": "Leve",
+    "ok": true,
+    "justificacion": "Se detectó un solo daño superficial menor, un rayón en el lateral izquierdo, sin comprometer la seguridad vial."
+  },
+  {
+    "caso": "Daño moderado (múltiples componentes)",
+    "esperado": "Moderado",
+    "obtenido": "Moderado",
+    "ok": true,
+    "justificacion": "El vehículo presenta múltiples daños medianos en zonas como parachoques, faro delantero, puerta y abolladura, sin comprometer la seguridad vial de manera inminente."
+  },
+  {
+    "caso": "Daño grave (parabrisas + múltiples críticos)",
+    "esperado": "Grave",
+    "obtenido": "Grave",
+    "ok": true,
+    "justificacion": "Se detectaron 6 daños, incluyendo parabrisas dañado y faro delantero, lo que compromete la seguridad vial."
+  }
+]
