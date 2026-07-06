@@ -314,13 +314,6 @@ with st.sidebar:
         help="Mínima confianza para mostrar una detección"
     )
     st.divider()
-    foto_detalle = st.toggle(
-        "🔍 Foto de detalle / close-up",
-        value=False,
-        help="Activa esto si la foto es un primer plano de una parte del vehículo "
-             "(puerta, parachoques, etc.) y el auto completo no es visible."
-    )
-    st.divider()
     st.markdown("**Sobre el sistema**")
     st.caption("YOLOv8s + Groq AI\n\n14 clases de daño vehicular\n\n~13,000 imágenes de entrenamiento")
 
@@ -362,6 +355,12 @@ with col_upload:
         type=["jpg", "jpeg", "png", "bmp", "webp"],
         help="Formatos soportados: JPG, JPEG, PNG, BMP, WEBP",
         label_visibility="collapsed",
+    )
+    foto_detalle = st.toggle(
+        "🔍 Foto de detalle / close-up",
+        value=False,
+        help="¿La foto es de una parte del vehículo (puerta, capó, parachoques) "
+             "sin mostrar el auto completo? Actívalo para saltarse la validación automática.",
     )
     if modo_demo and archivo_subido is None:
         usar_demo_directo = st.button(
