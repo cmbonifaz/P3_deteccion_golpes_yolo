@@ -40,46 +40,121 @@ st.set_page_config(
 # ============================================================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    html, body, [class*="css"] { 
+        font-family: 'Outfit', sans-serif; 
+    }
 
+    /* Contenedor de Cabecera con diseño Glass-Indigo y brillo */
     .header-container {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        padding: 2.5rem 2rem 2rem 2rem;
-        border-radius: 16px;
-        margin-bottom: 2rem;
-        border: 1px solid #334155;
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 27, 75, 0.8) 100%);
+        padding: 3rem 2.5rem;
+        border-radius: 24px;
+        margin-bottom: 2.5rem;
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        box-shadow: 0 10px 40px rgba(99, 102, 241, 0.12);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        position: relative;
+        overflow: hidden;
     }
+    
+    .header-container::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 3px;
+        background: linear-gradient(90deg, #3b82f6, #6366f1, #ec4899);
+    }
+
     .header-title {
-        color: #f1f5f9; font-size: 2rem; font-weight: 700;
-        margin: 0 0 0.5rem 0; letter-spacing: -0.5px;
+        color: #ffffff; 
+        font-size: 2.6rem; 
+        font-weight: 800;
+        margin: 0.5rem 0 0.75rem 0; 
+        letter-spacing: -1px;
+        background: linear-gradient(90deg, #ffffff, #c7d2fe);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
-    .header-subtitle { color: #94a3b8; font-size: 1rem; margin: 0; }
+    
+    .header-subtitle { 
+        color: #94a3b8; 
+        font-size: 1.1rem; 
+        margin: 0;
+        line-height: 1.6;
+        max-width: 800px;
+    }
+    
     .header-badge {
-        display: inline-block; background: #3b82f6; color: white;
-        font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.75rem;
-        border-radius: 100px; margin-bottom: 1rem; letter-spacing: 0.5px;
+        display: inline-flex; 
+        align-items: center;
+        background: rgba(99, 102, 241, 0.15); 
+        color: #a5b4fc;
+        font-size: 0.8rem; 
+        font-weight: 600; 
+        padding: 0.35rem 1rem;
+        border-radius: 100px; 
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.1);
     }
+
+    /* Banner de Modo Demo */
     .demo-banner {
-        background: linear-gradient(90deg, #f59e0b, #d97706);
-        color: white; padding: 0.6rem 1.2rem; border-radius: 8px;
-        font-weight: 600; font-size: 0.9rem; margin-bottom: 1.5rem;
-        display: flex; align-items: center; gap: 0.5rem;
+        background: linear-gradient(90deg, #d97706, #b45309);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        color: #fef3c7; 
+        padding: 0.75rem 1.25rem; 
+        border-radius: 12px;
+        font-weight: 600; 
+        font-size: 0.92rem; 
+        margin-bottom: 2rem;
+        display: flex; 
+        align-items: center; 
+        gap: 0.6rem;
+        box-shadow: 0 4px 20px rgba(217, 119, 6, 0.1);
     }
+
+    /* Insignias de Estado General */
     .estado-badge {
-        display: inline-flex; align-items: center; gap: 0.5rem;
-        padding: 0.75rem 1.5rem; border-radius: 12px;
-        font-size: 1.25rem; font-weight: 700; border: 2px solid;
-        margin-bottom: 1rem;
+        display: inline-flex; 
+        align-items: center; 
+        gap: 0.75rem;
+        padding: 1rem 2rem; 
+        border-radius: 16px;
+        font-size: 1.4rem; 
+        font-weight: 800; 
+        border: 2px solid;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
     }
+
+    /* Tarjetas Glassmorphism adaptativas */
     .section-card {
-        background: #f8fafc; border: 1px solid #e2e8f0;
-        border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;
+        background: rgba(128, 128, 128, 0.08); 
+        border: 1px solid rgba(128, 128, 128, 0.18);
+        border-radius: 18px; 
+        padding: 1.75rem; 
+        margin-bottom: 1.5rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
     }
+    
+    .section-card strong {
+        color: #6366f1;
+    }
+
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    .stDataFrame { border-radius: 8px; overflow: hidden; }
+    
+    /* Custom Styling para el DataFrame */
+    .stDataFrame { 
+        border-radius: 12px; 
+        overflow: hidden; 
+        border: 1px solid rgba(128, 128, 128, 0.15);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -205,7 +280,7 @@ with col_upload:
     if modo_demo and archivo_subido is None:
         usar_demo_directo = st.button(
             "🧪 Probar con detecciones de ejemplo (sin imagen)",
-            use_container_width=True,
+            width="stretch",
         )
     else:
         usar_demo_directo = False
@@ -213,12 +288,12 @@ with col_upload:
 with col_info:
     st.markdown("""
     <div class="section-card">
-        <strong>💡 Recomendaciones para mejores resultados:</strong>
-        <ul style="margin-top: 0.5rem; color: #475569; font-size: 0.9rem;">
-            <li>Buena iluminación natural o artificial</li>
-            <li>El vehículo debe ser el elemento principal</li>
-            <li>Evita ángulos muy extremos (&lt;45°)</li>
-            <li>Resolución mínima: 640×640 px</li>
+        <strong style="color: #3b82f6; font-size: 1.1rem; display: block; margin-bottom: 0.75rem;">💡 Recomendaciones para mejores resultados:</strong>
+        <ul style="margin-top: 0rem; font-size: 0.92rem; line-height: 1.7; padding-left: 1.2rem; opacity: 0.85;">
+            <li>Buena iluminación natural o artificial.</li>
+            <li>El vehículo debe ser el elemento principal de la toma.</li>
+            <li>Evita ángulos muy extremos (menores a 45°).</li>
+            <li>Resolución de imagen mínima recomendada: 640×640 px.</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -234,10 +309,10 @@ def renderizar_resultados(img_original, img_anotada, detecciones, nombre_archivo
     col_orig, col_anotada = st.columns(2)
     with col_orig:
         st.markdown("**Imagen original**")
-        st.image(img_original, use_container_width=True)
+        st.image(img_original, width="stretch")
     with col_anotada:
         st.markdown("**Daños detectados**")
-        st.image(img_anotada, use_container_width=True)
+        st.image(img_anotada, width="stretch")
 
     st.divider()
 
@@ -253,7 +328,7 @@ def renderizar_resultados(img_original, img_anotada, detecciones, nombre_archivo
             "Confianza":    formatear_confianza(d["confianza"]),
             "Zona":         d["zona"],
         } for d in detecciones])
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
 
     st.divider()
 
@@ -262,7 +337,7 @@ def renderizar_resultados(img_original, img_anotada, detecciones, nombre_archivo
     generar_btn = st.button(
         "✨ Generar reporte con Groq",
         type="primary",
-        use_container_width=True,
+        width="stretch",
         key="btn_reporte",
     )
 
@@ -292,7 +367,7 @@ def renderizar_resultados(img_original, img_anotada, detecciones, nombre_archivo
             st.markdown(
                 f"""
                 <div class="section-card">
-                    <p style="color: #334155; line-height: 1.7; margin: 0;">
+                    <p style="line-height: 1.7; margin: 0; color: var(--text-color); opacity: 0.95;">
                         {justificacion}
                     </p>
                 </div>
@@ -307,7 +382,7 @@ def renderizar_resultados(img_original, img_anotada, detecciones, nombre_archivo
                 data=texto_reporte,
                 file_name=f"reporte_vehiculo_{nombre_archivo}.txt",
                 mime="text/plain",
-                use_container_width=True,
+                width="stretch",
             )
 
         except RuntimeError as e:
@@ -376,16 +451,19 @@ else:
     # Estado inicial — placeholder visual
     st.markdown("""
     <div style="
-        text-align: center; padding: 4rem 2rem;
-        background: #f8fafc; border: 2px dashed #cbd5e1;
-        border-radius: 16px; color: #94a3b8;
+        text-align: center; padding: 5rem 2rem;
+        background: rgba(128, 128, 128, 0.05);
+        border: 2px dashed rgba(128, 128, 128, 0.2);
+        border-radius: 20px;
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+        backdrop-filter: blur(8px);
     ">
-        <div style="font-size: 4rem; margin-bottom: 1rem;">📷</div>
-        <p style="font-size: 1.1rem; font-weight: 500; margin: 0;">
+        <div style="font-size: 4.5rem; margin-bottom: 1.2rem; filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.3));">📷</div>
+        <h3 style="font-size: 1.35rem; font-weight: 700; margin: 0; color: var(--text-color);">
             Sube una imagen del vehículo para comenzar el análisis
-        </p>
-        <p style="font-size: 0.9rem; margin-top: 0.5rem;">
-            El sistema detectará rayones, abolladuras, faros rotos, parachoques dañados y más.
+        </h3>
+        <p style="font-size: 0.95rem; opacity: 0.75; margin-top: 0.75rem; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+            El sistema de visión artificial detectará automáticamente abolladuras, rayones, faros rotos, parachoques dañados, óxido y más.
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -395,11 +473,25 @@ else:
 # Footer
 # ============================================================
 st.markdown("---")
-col_f1, col_f2, col_f3 = st.columns(3)
-with col_f1:
-    st.markdown("**🔬 Modelo:** YOLOv8s — 14 clases")
-with col_f2:
-    st.markdown("**🤖 LLM:** Gemini 2.0 Flash-Lite")
-with col_f3:
-    estado_modelo = "✅ Listo" if modelo_listo else "⏳ Entrenando..."
-    st.markdown(f"**🎯 Estado:** {estado_modelo}")
+st.markdown(
+    f"""
+    <div style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.9rem 1.75rem;
+        background: rgba(128, 128, 128, 0.06);
+        border: 1px solid rgba(128, 128, 128, 0.15);
+        border-radius: 14px;
+        font-size: 0.88rem;
+        opacity: 0.9;
+        color: var(--text-color);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    ">
+        <div>🔬 <strong>Modelo:</strong> YOLOv8s (14 clases)</div>
+        <div>🤖 <strong>LLM:</strong> Groq Llama-3.3-70b-versatile</div>
+        <div>🎯 <strong>Estado del Sistema:</strong> {"🟢 Listo para inspección" if modelo_listo else "🟡 Modo Demo Activo (Cargando best.pt...)"}</div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
