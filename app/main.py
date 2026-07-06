@@ -26,6 +26,14 @@ from llm_report import generar_reporte
 from utils import ESTADO_CONFIG, formatear_confianza, nombre_clase_legible, generar_texto_reporte
 from pdf_generator import generar_pdf_reporte
 
+# Importar excepción personalizada de inferencia (disponible aunque el modelo no esté cargado)
+try:
+    from inference import VehicleNotFoundError
+except Exception:
+    # Fallback por si inference falla al importar (modelo no instalado, etc.)
+    class VehicleNotFoundError(Exception):  # type: ignore
+        pass
+
 # ============================================================
 # Configuración de la página
 # ============================================================
@@ -33,7 +41,7 @@ st.set_page_config(
     page_title="Detección de Daños en Vehículos",
     page_icon="🚗",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # ============================================================
@@ -306,6 +314,13 @@ with st.sidebar:
         help="Mínima confianza para mostrar una detección"
     )
     st.divider()
+    foto_detalle = st.toggle(
+        "🔍 Foto de detalle / close-up",
+        value=False,
+        help="Activa esto si la foto es un primer plano de una parte del vehículo "
+             "(puerta, parachoques, etc.) y el auto completo no es visible."
+    )
+    st.divider()
     st.markdown("**Sobre el sistema**")
     st.caption("YOLOv8s + Groq AI\n\n14 clases de daño vehicular\n\n~13,000 imágenes de entrenamiento")
 
@@ -520,13 +535,20 @@ if archivo_subido is not None:
             from inference import detectar_danos, imagen_original_rgb
             with st.spinner("🔍 Analizando imagen con YOLOv8..."):
                 img_original = imagen_original_rgb(ruta_temp)
-                img_anotada, detecciones = detectar_danos(ruta_temp, conf_umbral=conf_threshold)
+                img_anotada, detecciones = detectar_danos(
+                    ruta_temp,
+                    conf_umbral=conf_threshold,
+                    skip_vehicle_check=foto_detalle,
+                )
 
         renderizar_resultados(
             img_original, img_anotada, detecciones,
             nombre_archivo=Path(archivo_subido.name).stem
         )
 
+    except VehicleNotFoundError as e:
+        st.warning(f"🚫 {e}")
+        st.info("💡 Si es una foto de detalle (puerta, capot, parachoques), activa el toggle **🔍 Foto de detalle / close-up** en la barra lateral.")
     except Exception as e:
         st.error(f"❌ Error inesperado: {e}")
     finally:
