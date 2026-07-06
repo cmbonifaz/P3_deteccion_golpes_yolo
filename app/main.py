@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from llm_report import generar_reporte
 from utils import ESTADO_CONFIG, formatear_confianza, nombre_clase_legible, generar_texto_reporte
+from pdf_generator import generar_pdf_reporte
 
 # ============================================================
 # Configuración de la página
@@ -46,16 +47,34 @@ st.markdown("""
         font-family: 'Outfit', sans-serif; 
     }
 
-    /* Contenedor de Cabecera con diseño Glass-Indigo y brillo */
+    /* Ocultar barra superior por defecto de Streamlit y botones nativos */
+    header { visibility: hidden !important; }
+    #MainMenu { visibility: hidden !important; }
+    footer { visibility: hidden !important; }
+    .stDeployButton { display: none !important; }
+
+    /* Ajustar padding superior */
+    .block-container {
+        padding-top: 1.5rem !important;
+        padding-bottom: 2rem !important;
+    }
+
+    /* Estilo del Sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #0f172a !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+    }
+
+    /* Contenedor de Cabecera con diseño Premium Glass-Indigo y brillo */
     .header-container {
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 27, 75, 0.8) 100%);
-        padding: 3rem 2.5rem;
+        background: linear-gradient(135deg, rgba(17, 24, 39, 0.7) 0%, rgba(30, 27, 75, 0.7) 100%);
+        padding: 2.5rem 3rem;
         border-radius: 24px;
         margin-bottom: 2.5rem;
         border: 1px solid rgba(99, 102, 241, 0.25);
         box-shadow: 0 10px 40px rgba(99, 102, 241, 0.12);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
         position: relative;
         overflow: hidden;
     }
@@ -63,7 +82,7 @@ st.markdown("""
     .header-container::before {
         content: "";
         position: absolute;
-        top: 0; left: 0; right: 0; height: 3px;
+        top: 0; left: 0; right: 0; height: 4px;
         background: linear-gradient(90deg, #3b82f6, #6366f1, #ec4899);
     }
 
@@ -132,28 +151,80 @@ st.markdown("""
 
     /* Tarjetas Glassmorphism adaptativas */
     .section-card {
-        background: rgba(128, 128, 128, 0.08); 
-        border: 1px solid rgba(128, 128, 128, 0.18);
+        background: rgba(30, 41, 59, 0.4) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 18px; 
         padding: 1.75rem; 
         margin-bottom: 1.5rem;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
     }
     
     .section-card strong {
         color: #6366f1;
     }
 
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    
     /* Custom Styling para el DataFrame */
     .stDataFrame { 
         border-radius: 12px; 
         overflow: hidden; 
-        border: 1px solid rgba(128, 128, 128, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Sobrescribir botones globales de Streamlit */
+    .stButton button, .stDownloadButton button {
+        background: linear-gradient(95deg, #4f46e5 0%, #6366f1 50%, #ec4899 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 0.75rem 2rem !important;
+        font-weight: 700 !important;
+        font-size: 0.95rem !important;
+        letter-spacing: 0.5px !important;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.25) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        width: 100% !important;
+        height: auto !important;
+        display: block !important;
+    }
+
+    .stButton button:hover, .stDownloadButton button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4), 0 0 10px rgba(236, 72, 153, 0.2) !important;
+    }
+
+    .stButton button:active, .stDownloadButton button:active {
+        transform: translateY(1px) !important;
+    }
+
+    /* Estilo específico para botones de descarga */
+    .stDownloadButton button {
+        background: linear-gradient(95deg, #059669 0%, #10b981 100%) !important;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2) !important;
+    }
+
+    .stDownloadButton button:hover {
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35) !important;
+    }
+
+    /* Estilo del File Uploader drag & drop */
+    [data-testid="stFileUploader"] {
+        background: rgba(30, 41, 59, 0.3) !important;
+        border: 2px dashed rgba(99, 102, 241, 0.3) !important;
+        border-radius: 18px !important;
+        padding: 1.5rem !important;
+        transition: all 0.3s ease !important;
+    }
+
+    [data-testid="stFileUploader"]:hover {
+        border-color: #ec4899 !important;
+        background: rgba(30, 41, 59, 0.5) !important;
+    }
+
+    /* Ocultar elementos extra de carga */
+    [data-testid="stFileUploader"] section {
+        background: transparent !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -377,13 +448,41 @@ def renderizar_resultados(img_original, img_anotada, detecciones, nombre_archivo
 
             st.divider()
             texto_reporte = generar_texto_reporte(estado, justificacion, detecciones)
-            st.download_button(
-                label="⬇️ Descargar reporte (.txt)",
-                data=texto_reporte,
-                file_name=f"reporte_vehiculo_{nombre_archivo}.txt",
-                mime="text/plain",
-                width="stretch",
-            )
+            
+            try:
+                # Generar PDF en memoria
+                pdf_bytes = bytes(generar_pdf_reporte(
+                    img_original, img_anotada, detecciones,
+                    estado, justificacion, nombre_archivo=nombre_archivo
+                ))
+                
+                # Crear dos columnas para los botones de descarga
+                col_d1, col_d2 = st.columns(2)
+                with col_d1:
+                    st.download_button(
+                        label="⬇️ Descargar Reporte PDF (Oficial)",
+                        data=pdf_bytes,
+                        file_name=f"reporte_inspeccion_{nombre_archivo}.pdf",
+                        mime="application/pdf",
+                        width="stretch",
+                    )
+                with col_d2:
+                    st.download_button(
+                        label="📄 Descargar Reporte TXT (Resumen)",
+                        data=texto_reporte,
+                        file_name=f"reporte_vehiculo_{nombre_archivo}.txt",
+                        mime="text/plain",
+                        width="stretch",
+                    )
+            except Exception as pdf_err:
+                st.warning(f"⚠️ No se pudo compilar el PDF: {pdf_err}. Ofreciendo versión de texto plano.")
+                st.download_button(
+                    label="⬇️ Descargar reporte (.txt)",
+                    data=texto_reporte,
+                    file_name=f"reporte_vehiculo_{nombre_archivo}.txt",
+                    mime="text/plain",
+                    width="stretch",
+                )
 
         except RuntimeError as e:
             st.error(str(e))
