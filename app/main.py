@@ -44,11 +44,15 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+import cv2
+
 # Inicializar estado para múltiples imágenes
 if "imagenes_analizadas" not in st.session_state:
     st.session_state.imagenes_analizadas = []
 if "ultimo_cam_bytes" not in st.session_state:
     st.session_state.ultimo_cam_bytes = None
+if "videos_procesados" not in st.session_state:
+    st.session_state.videos_procesados = []
 
 
 # ============================================================
@@ -357,10 +361,11 @@ st.markdown("### 📤 Cargar imagen(es) del vehículo")
 col_upload, col_info = st.columns([2, 1])
 
 with col_upload:
-    tab_subir, tab_camara = st.tabs(["📁 Subir Archivo(s)", "📷 Usar Cámara"])
+    tab_subir, tab_camara, tab_video = st.tabs(["📁 Subir Archivo(s)", "📷 Usar Cámara", "🎥 Subir Video"])
     
     archivos_subidos = None
     captura_camara = None
+    archivo_video = None
     
     with tab_subir:
         archivos_subidos = st.file_uploader(
@@ -376,13 +381,31 @@ with col_upload:
             "Toma una foto de los daños del vehículo",
             label_visibility="collapsed",
         )
+
+    with tab_video:
+        archivo_video = st.file_uploader(
+            label="Arrastra o selecciona un archivo de video",
+            type=["mp4", "mov", "avi", "mkv", "webm"],
+            help="Formatos soportados: MP4, MOV, AVI, MKV, WEBM (Muestreo de 1 frame/segundo)",
+            label_visibility="collapsed",
+        )
         
-    # 1. Sincronizar archivos eliminados del uploader para actualizar el estado
+    # 1. Sincronizar archivos eliminados del uploader y video para actualizar el estado
     nombres_subidos = [f.name for f in archivos_subidos] if archivos_subidos else []
+    nombre_video_actual = archivo_video.name if archivo_video else None
+    
     st.session_state.imagenes_analizadas = [
         img for img in st.session_state.imagenes_analizadas
-        if img["nombre"].startswith("Captura_Camara_") or img["nombre"] in nombres_subidos
+        if img["nombre"].startswith("Captura_Camara_") 
+        or img["nombre"] in nombres_subidos
+        or (nombre_video_actual and img["nombre"].startswith(nombre_video_actual))
     ]
+
+    # Limpiar video no seleccionado
+    if not nombre_video_actual:
+        st.session_state.videos_procesados = []
+    else:
+        st.session_state.videos_procesados = [nombre_video_actual]
 
     # 2. Procesar nuevos archivos subidos
     if archivos_subidos:
@@ -481,6 +504,108 @@ with col_upload:
                         os.unlink(ruta_temp)
                     except:
                         pass
+
+    # 4. Procesar nuevo video subido
+    if archivo_video is not None and nombre_video_actual not in st.session_state.videos_procesados:
+        if len(st.session_state.imagenes_analizadas) >= 10:
+            st.warning("⚠️ Límite de 10 imágenes alcanzado. Limpia la inspección para procesar el video.")
+        else:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=Path(archivo_video.name).suffix or ".mp4") as tmp:
+                tmp.write(archivo_video.read())
+                ruta_video_temp = tmp.name
+                
+            try:
+                cap = cv2.VideoCapture(ruta_video_temp)
+                if not cap.isOpened():
+                    st.error("❌ No se pudo abrir el archivo de video.")
+                else:
+                    fps = cap.get(cv2.CAP_PROP_FPS)
+                    if not fps or fps <= 0:
+                        fps = 30.0
+                    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                    
+                    frames_extraidos = []
+                    segundo = 0
+                    while True:
+                        frame_idx = int(segundo * fps)
+                        if frame_idx >= total_frames:
+                            break
+                        
+                        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+                        exito, frame = cap.read()
+                        if not exito:
+                            break
+                            
+                        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        frames_extraidos.append({
+                            "segundo": segundo,
+                            "imagen": frame_rgb
+                        })
+                        segundo += 1
+                        
+                    cap.release()
+                    
+                    # Limitar frames si exceden el espacio disponible
+                    disp_libre = 10 - len(st.session_state.imagenes_analizadas)
+                    if len(frames_extraidos) > disp_libre:
+                        st.warning(f"⚠️ El video tiene {len(frames_extraidos)} segundos, pero solo queda espacio para {disp_libre} frames. Se analizarán los primeros {disp_libre} segundos.")
+                        frames_extraidos = frames_extraidos[:disp_libre]
+                        
+                    frames_procesados_con_exito = 0
+                    
+                    for item in frames_extraidos:
+                        seg = item["segundo"]
+                        img_rgb = item["imagen"]
+                        nombre_frame = f"{nombre_video_actual} (Seg. {seg})"
+                        
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_frame:
+                            cv2.imwrite(tmp_frame.name, cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR))
+                            ruta_frame_temp = tmp_frame.name
+                            
+                        try:
+                            if modo_demo:
+                                img_anotada = imagen_demo_anotada()
+                                st.session_state.imagenes_analizadas.append({
+                                    "nombre": nombre_frame,
+                                    "original": img_rgb,
+                                    "anotada": img_anotada,
+                                    "detecciones": DETECCIONES_DEMO
+                                })
+                                frames_procesados_con_exito += 1
+                            else:
+                                from inference import detectar_danos
+                                with st.spinner(f"🔍 Analizando frame en segundo {seg}..."):
+                                    img_anotada, detecciones = detectar_danos(ruta_frame_temp, conf_umbral=conf_threshold)
+                                    st.session_state.imagenes_analizadas.append({
+                                        "nombre": nombre_frame,
+                                        "original": img_rgb,
+                                        "anotada": img_anotada,
+                                        "detecciones": detecciones
+                                    })
+                                    frames_procesados_con_exito += 1
+                        except VehicleNotFoundError:
+                            pass
+                        except Exception as e:
+                            st.error(f"❌ Error al procesar el segundo {seg} del video: {e}")
+                        finally:
+                            try:
+                                os.unlink(ruta_frame_temp)
+                            except:
+                                pass
+                                
+                    if frames_procesados_con_exito == 0:
+                        st.warning("🚫 No se detectó ningún vehículo en ningún frame del video. Asegúrate de enfocar el automóvil.")
+                    else:
+                        st.success(f"✅ Se analizaron {frames_procesados_con_exito} segundos del video con éxito.")
+                        
+                    st.session_state.videos_procesados.append(nombre_video_actual)
+            except Exception as e:
+                st.error(f"❌ Error al decodificar video: {e}")
+            finally:
+                try:
+                    os.unlink(ruta_video_temp)
+                except:
+                    pass
 
     # Usar demo directo sólo si no hay imágenes reales
     if modo_demo and len(st.session_state.imagenes_analizadas) == 0:
