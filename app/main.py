@@ -522,8 +522,8 @@ with col_upload:
                         fps = 30.0
                     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
                     
-                    # Extraer exactamente 10 frames uniformemente distribuidos
-                    num_frames_objetivo = 10
+                    # Extraer exactamente 20 frames uniformemente distribuidos
+                    num_frames_objetivo = 20
                     step = max(1.0, total_frames / num_frames_objetivo)
                     
                     frames_extraidos = []
@@ -546,15 +546,17 @@ with col_upload:
                         
                     cap.release()
                     
-                    # Limitar frames si exceden el espacio disponible
                     disp_libre = 10 - len(st.session_state.imagenes_analizadas)
-                    if len(frames_extraidos) > disp_libre:
-                        frames_extraidos = frames_extraidos[:disp_libre]
-                        
+                    
                     frames_procesados_con_exito = 0
                     frames_con_danos = 0
                     
                     for item in frames_extraidos:
+                        # Si ya llenamos el cupo disponible (máximo 10 imágenes en total en la sesión), detenemos el análisis
+                        if frames_con_danos >= disp_libre:
+                            st.warning("⚠️ Se alcanzó el cupo máximo de 10 imágenes analizadas en la sesión. Se detuvo el análisis del video.")
+                            break
+                            
                         seg = item["segundo"]
                         img_rgb = item["imagen"]
                         nombre_frame = f"{nombre_video_actual} (Seg. {seg})"
