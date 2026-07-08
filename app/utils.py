@@ -129,10 +129,11 @@ def generar_texto_reporte(estado: str, justificacion: str,
         lineas.append("  No se detectaron daños visibles.")
     else:
         for i, det in enumerate(detecciones, 1):
+            origen = f" (en {det['imagen']})" if "imagen" in det else ""
             lineas.append(
                 f"  {i}. {nombre_clase_legible(det['clase'])} "
                 f"— Confianza: {formatear_confianza(det['confianza'])} "
-                f"— Zona: {det.get('zona', 'N/A')}"
+                f"— Zona: {det.get('zona', 'N/A')}{origen}"
             )
 
     lineas += [

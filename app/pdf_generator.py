@@ -37,9 +37,9 @@ class ReportePDF(FPDF):
         self.cell(0, 10, f"Pagina {self.page_no()}/{{nb}} | Reporte Tecnico Oficial - Confidencial", align="L")
         self.cell(0, 10, "YOLOv8 + Groq AI", align="R")
 
-def generar_pdf_reporte(img_original, img_anotada, detecciones, estado, justificacion, nombre_archivo="vehiculo"):
+def generar_pdf_reporte(imagenes_analizadas: list, todas_detecciones: list, estado: str, justificacion: str, identificador_vehiculo: str = "Vehiculo"):
     """
-    Genera un informe PDF profesional con imágenes, tablas y análisis.
+    Genera un informe PDF profesional con múltiples imágenes, tablas y análisis.
     Devuelve los bytes del PDF generado.
     """
     # Crear PDF
@@ -55,7 +55,7 @@ def generar_pdf_reporte(img_original, img_anotada, detecciones, estado, justific
     pdf.set_font("helvetica", "", 9)
     pdf.set_text_color(100, 116, 139)
     fecha_str = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-    pdf.cell(0, 5, f"Fecha de emision: {fecha_str} | ID Archivo: {nombre_archivo}", ln=True)
+    pdf.cell(0, 5, f"Fecha de emision: {fecha_str} | ID Vehiculo: {identificador_vehiculo}", ln=True)
     pdf.ln(5)
     
     # 2. ESTADO DEL VEHÍCULO (Badge grande)
@@ -97,61 +97,68 @@ def generar_pdf_reporte(img_original, img_anotada, detecciones, estado, justific
     pdf.set_text_color(71, 85, 105)
     pdf.set_font("helvetica", "B", 9)
     
-    pdf.cell(80, 8, " Tipo de Daño", border=1, fill=True)
-    pdf.cell(50, 8, " Zona Afectada", border=1, fill=True)
-    pdf.cell(60, 8, " Confianza del Modelo", border=1, fill=True, ln=True)
+    pdf.cell(50, 8, " Foto / Origen", border=1, fill=True)
+    pdf.cell(60, 8, " Tipo de Daño", border=1, fill=True)
+    pdf.cell(40, 8, " Zona Afectada", border=1, fill=True)
+    pdf.cell(40, 8, " Confianza", border=1, fill=True, ln=True)
     
     pdf.set_font("helvetica", "", 9)
     pdf.set_text_color(51, 65, 85)
     
-    if not detecciones:
+    if not todas_detecciones:
         pdf.cell(190, 8, " No se detectaron daños en la carroceria.", border=1, ln=True, align="C")
     else:
-        for d in detecciones:
-            pdf.cell(80, 8, f" {d['clase_legible']}", border=1)
-            pdf.cell(50, 8, f" {d['zona']}", border=1)
-            pdf.cell(60, 8, f" {int(d['confianza'] * 100)}%", border=1, ln=True)
+        for d in todas_detecciones:
+            pdf.cell(50, 8, f" {d.get('imagen', 'Imagen')}", border=1)
+            pdf.cell(60, 8, f" {d['clase_legible']}", border=1)
+            pdf.cell(40, 8, f" {d['zona']}", border=1)
+            pdf.cell(40, 8, f" {int(d['confianza'] * 100)}%", border=1, ln=True)
             
     pdf.ln(10)
     
     # 5. IMÁGENES DEL ANÁLISIS
-    # Escribir imágenes en archivos temporales para cargarlas al PDF
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_orig, \
-         tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_anot:
-        
-        # Guardar imágenes como archivos
-        cv2.imwrite(tmp_orig.name, cv2.cvtColor(img_original, cv2.COLOR_RGB2BGR))
-        cv2.imwrite(tmp_anot.name, cv2.cvtColor(img_anotada, cv2.COLOR_RGB2BGR))
-        
-        # Nueva página para las imágenes si es necesario, o al final
-        pdf.add_page()
-        
-        pdf.set_font("helvetica", "B", 12)
-        pdf.set_text_color(15, 23, 42)
-        pdf.cell(0, 8, "Registro Fotografico del Analisis", ln=True)
+    pdf.add_page()
+    pdf.set_font("helvetica", "B", 12)
+    pdf.set_text_color(15, 23, 42)
+    pdf.cell(0, 8, "Registro Fotografico del Analisis", ln=True)
+    pdf.ln(2)
+    
+    for idx, img_info in enumerate(imagenes_analizadas):
+        # Si la posición Y está cerca del final, forzar salto de página
+        if pdf.get_y() > 200:
+            pdf.add_page()
+            
+        pdf.set_font("helvetica", "B", 10)
+        pdf.set_text_color(51, 65, 85)
+        pdf.cell(0, 6, f"Foto {idx + 1}: {img_info['nombre']}", ln=True)
         pdf.ln(2)
         
-        # Posicionar imágenes una al lado de la otra (o en vertical si son anchas)
-        # Ancho disponible 190 mm. Haremos dos de 90 mm cada una.
-        y_pos = pdf.get_y()
-        pdf.image(tmp_orig.name, x=10, y=y_pos, w=90, h=65)
-        pdf.image(tmp_anot.name, x=110, y=y_pos, w=90, h=65)
-        
-        pdf.set_y(y_pos + 68)
-        pdf.set_font("helvetica", "I", 8)
-        pdf.set_text_color(100, 116, 139)
-        pdf.cell(90, 5, "Fotografia Original del Vehiculo", align="C")
-        pdf.cell(110, 5, "Captura Analizada (Bounding Boxes YOLOv8)", align="C", ln=True)
-        
-        # Eliminar archivos temporales
-        orig_name = tmp_orig.name
-        anot_name = tmp_anot.name
-        
-    try:
-        os.unlink(orig_name)
-        os.unlink(anot_name)
-    except Exception:
-        pass
-        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_orig, \
+             tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_anot:
+            
+            # Guardar imágenes como archivos
+            cv2.imwrite(tmp_orig.name, cv2.cvtColor(img_info['original'], cv2.COLOR_RGB2BGR))
+            cv2.imwrite(tmp_anot.name, cv2.cvtColor(img_info['anotada'], cv2.COLOR_RGB2BGR))
+            
+            y_pos = pdf.get_y()
+            pdf.image(tmp_orig.name, x=10, y=y_pos, w=90, h=65)
+            pdf.image(tmp_anot.name, x=110, y=y_pos, w=90, h=65)
+            
+            pdf.set_y(y_pos + 68)
+            pdf.set_font("helvetica", "I", 8)
+            pdf.set_text_color(100, 116, 139)
+            pdf.cell(90, 5, "Fotografia Original", align="C")
+            pdf.cell(110, 5, "Captura Analizada (Bounding Boxes YOLO)", align="C", ln=True)
+            pdf.ln(10)
+            
+            orig_name = tmp_orig.name
+            anot_name = tmp_anot.name
+            
+        try:
+            os.unlink(orig_name)
+            os.unlink(anot_name)
+        except Exception:
+            pass
+            
     # Obtener el contenido en bytes del PDF
     return bytes(pdf.output())

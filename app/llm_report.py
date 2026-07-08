@@ -36,16 +36,19 @@ else:
 def _preparar_detecciones_para_prompt(detecciones: list) -> list:
     """
     Simplifica las detecciones para el prompt del LLM:
-    elimina coordenadas brutas y conserva solo clase, confianza y zona.
+    elimina coordenadas brutas y conserva solo clase, confianza, zona y origen de imagen.
     """
-    return [
-        {
+    resultado = []
+    for d in detecciones:
+        item = {
             "tipo_daño": d["clase_legible"],
             "confianza": f"{d['confianza'] * 100:.1f}%",
             "zona":      d["zona"],
         }
-        for d in detecciones
-    ]
+        if "imagen" in d:
+            item["foto_origen"] = d["imagen"]
+        resultado.append(item)
+    return resultado
 
 
 def _parsear_respuesta_json(texto: str) -> dict:

@@ -44,6 +44,13 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Inicializar estado para múltiples imágenes
+if "imagenes_analizadas" not in st.session_state:
+    st.session_state.imagenes_analizadas = []
+if "ultimo_cam_bytes" not in st.session_state:
+    st.session_state.ultimo_cam_bytes = None
+
+
 # ============================================================
 # CSS personalizado para una UI más premium
 # ============================================================
@@ -345,22 +352,23 @@ if modo_demo:
 # ============================================================
 # Zona de carga de imagen
 # ============================================================
-st.markdown("### 📤 Cargar imagen del vehículo")
+st.markdown("### 📤 Cargar imagen(es) del vehículo")
 
 col_upload, col_info = st.columns([2, 1])
 
 with col_upload:
-    tab_subir, tab_camara = st.tabs(["📁 Subir Archivo", "📷 Usar Cámara"])
+    tab_subir, tab_camara = st.tabs(["📁 Subir Archivo(s)", "📷 Usar Cámara"])
     
-    archivo_subido = None
+    archivos_subidos = None
     captura_camara = None
     
     with tab_subir:
-        archivo_subido = st.file_uploader(
-            label="Arrastra o selecciona una imagen",
+        archivos_subidos = st.file_uploader(
+            label="Arrastra o selecciona una o más imágenes",
             type=["jpg", "jpeg", "png", "bmp", "webp"],
-            help="Formatos soportados: JPG, JPEG, PNG, BMP, WEBP",
+            help="Formatos soportados: JPG, JPEG, PNG, BMP, WEBP (Máx. 10 fotos)",
             label_visibility="collapsed",
+            accept_multiple_files=True,
         )
         
     with tab_camara:
@@ -369,18 +377,113 @@ with col_upload:
             label_visibility="collapsed",
         )
         
-    # Consolidar entrada
-    imagen_a_procesar = None
-    nombre_archivo = "imagen"
-    
-    if archivo_subido is not None:
-        imagen_a_procesar = archivo_subido
-        nombre_archivo = archivo_subido.name
-    elif captura_camara is not None:
-        imagen_a_procesar = captura_camara
-        nombre_archivo = "captura_camara.png"
+    # 1. Sincronizar archivos eliminados del uploader para actualizar el estado
+    nombres_subidos = [f.name for f in archivos_subidos] if archivos_subidos else []
+    st.session_state.imagenes_analizadas = [
+        img for img in st.session_state.imagenes_analizadas
+        if img["nombre"].startswith("Captura_Camara_") or img["nombre"] in nombres_subidos
+    ]
 
-    if modo_demo and imagen_a_procesar is None:
+    # 2. Procesar nuevos archivos subidos
+    if archivos_subidos:
+        # Calcular cuántos faltan por procesar reales
+        nuevos_archivos = [f for f in archivos_subidos if not any(img["nombre"] == f.name for img in st.session_state.imagenes_analizadas)]
+        
+        if len(st.session_state.imagenes_analizadas) + len(nuevos_archivos) > 10:
+            st.warning("⚠️ Límite de 10 imágenes excedido. Solo se procesarán las primeras 10.")
+            limite_disp = 10 - len(st.session_state.imagenes_analizadas)
+            nuevos_archivos = nuevos_archivos[:limite_disp]
+            
+        for archivo in nuevos_archivos:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=Path(archivo.name).suffix or ".png") as tmp:
+                tmp.write(archivo.read())
+                ruta_temp = tmp.name
+                
+            try:
+                if modo_demo:
+                    import cv2
+                    img_bgr = cv2.imread(ruta_temp)
+                    if img_bgr is not None:
+                        img_original = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+                        img_anotada = imagen_demo_anotada()
+                        st.session_state.imagenes_analizadas.append({
+                            "nombre": archivo.name,
+                            "original": img_original,
+                            "anotada": img_anotada,
+                            "detecciones": DETECCIONES_DEMO
+                        })
+                else:
+                    from inference import detectar_danos, imagen_original_rgb
+                    with st.spinner(f"🔍 Analizando {archivo.name} con YOLOv8..."):
+                        img_original = imagen_original_rgb(ruta_temp)
+                        img_anotada, detecciones = detectar_danos(ruta_temp, conf_umbral=conf_threshold)
+                        st.session_state.imagenes_analizadas.append({
+                            "nombre": archivo.name,
+                            "original": img_original,
+                            "anotada": img_anotada,
+                            "detecciones": detecciones
+                        })
+            except VehicleNotFoundError as e:
+                st.warning(f"🚫 La imagen '{archivo.name}' fue descartada: {e}")
+            except Exception as e:
+                st.error(f"❌ Error al procesar '{archivo.name}': {e}")
+            finally:
+                try:
+                    os.unlink(ruta_temp)
+                except:
+                    pass
+
+    # 3. Procesar capturas de cámara
+    if captura_camara is not None:
+        bytes_actuales = captura_camara.getvalue()
+        if st.session_state.ultimo_cam_bytes != bytes_actuales:
+            if len(st.session_state.imagenes_analizadas) >= 10:
+                st.warning("⚠️ Límite de 10 imágenes alcanzado. Limpia la inspección para agregar más.")
+            else:
+                cant_cam = len([x for x in st.session_state.imagenes_analizadas if x["nombre"].startswith("Captura_Camara_")])
+                nombre_cam = f"Captura_Camara_{cant_cam + 1}.png"
+                
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+                    tmp.write(bytes_actuales)
+                    ruta_temp = tmp.name
+                    
+                try:
+                    if modo_demo:
+                        import cv2
+                        img_bgr = cv2.imread(ruta_temp)
+                        if img_bgr is not None:
+                            img_original = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+                            img_anotada = imagen_demo_anotada()
+                            st.session_state.imagenes_analizadas.append({
+                                "nombre": nombre_cam,
+                                "original": img_original,
+                                "anotada": img_anotada,
+                                "detecciones": DETECCIONES_DEMO
+                            })
+                    else:
+                        from inference import detectar_danos, imagen_original_rgb
+                        with st.spinner("🔍 Analizando captura de cámara con YOLOv8..."):
+                            img_original = imagen_original_rgb(ruta_temp)
+                            img_anotada, detecciones = detectar_danos(ruta_temp, conf_umbral=conf_threshold)
+                            st.session_state.imagenes_analizadas.append({
+                                "nombre": nombre_cam,
+                                "original": img_original,
+                                "anotada": img_anotada,
+                                "detecciones": detecciones
+                            })
+                    st.session_state.ultimo_cam_bytes = bytes_actuales
+                except VehicleNotFoundError as e:
+                    st.warning(f"🚫 Captura omitida: {e}")
+                except Exception as e:
+                    st.error(f"❌ Error al procesar captura: {e}")
+                finally:
+                    try:
+                        os.unlink(ruta_temp)
+                    except:
+                        pass
+
+    # Usar demo directo sólo si no hay imágenes reales
+    if modo_demo and len(st.session_state.imagenes_analizadas) == 0:
         usar_demo_directo = st.button(
             "🧪 Probar con detecciones de ejemplo (sin imagen)",
             use_container_width=True,
@@ -405,49 +508,77 @@ with col_info:
 # ============================================================
 # Función de renderizado de resultados (compartida entre modos)
 # ============================================================
-def renderizar_resultados(img_original, img_anotada, detecciones, nombre_archivo="imagen"):
-    """Renderiza imágenes, tabla de detecciones y sección de reporte LLM."""
+def renderizar_resultados(imagenes_analizadas: list):
+    """Renderiza galería, tabla consolidada y el reporte LLM de múltiples imágenes."""
 
-    st.markdown("### 🖼️ Resultado de la Detección")
+    st.markdown("### 🖼️ Registro Fotográfico de Inspección")
+    
+    # Selector de imagen para ver en detalle
+    nombres_fotos = [img["nombre"] for img in imagenes_analizadas]
+    
+    col_sel, col_limpiar = st.columns([3, 1])
+    with col_sel:
+        foto_seleccionada = st.selectbox(
+            "🔍 Selecciona una imagen para ver detalles de anotación:",
+            nombres_fotos,
+            label_visibility="collapsed"
+        )
+    with col_limpiar:
+        if st.button("🧹 Limpiar Inspección", use_container_width=True, type="secondary"):
+            st.session_state.imagenes_analizadas = []
+            st.session_state.ultimo_cam_bytes = None
+            st.rerun()
+            
+    # Encontrar la imagen seleccionada
+    img_info = next(img for img in imagenes_analizadas if img["nombre"] == foto_seleccionada)
+    
     col_orig, col_anotada = st.columns(2)
     with col_orig:
-        st.markdown("**Imagen original**")
-        st.image(img_original, width="stretch")
+        st.markdown(f"**Fotografía Original ({img_info['nombre']})**")
+        st.image(img_info["original"], use_container_width=True)
     with col_anotada:
-        st.markdown("**Daños detectados**")
-        st.image(img_anotada, width="stretch")
+        st.markdown("**Daños detectados (YOLO)**")
+        st.image(img_info["anotada"], use_container_width=True)
 
     st.divider()
 
-    n_danos = len(detecciones)
-    st.markdown(f"### 📋 Detecciones encontradas: **{n_danos}**")
+    # Consolidador de todas las detecciones de todas las imágenes
+    todas_detecciones = []
+    for img in imagenes_analizadas:
+        for det in img["detecciones"]:
+            det_con_origen = det.copy()
+            det_con_origen["imagen"] = img["nombre"]
+            todas_detecciones.append(det_con_origen)
+            
+    n_danos_totales = len(todas_detecciones)
+    st.markdown(f"### 📋 Resumen de Daños Detectados (Total: **{n_danos_totales}**)")
 
-    if n_danos == 0:
-        st.success("✅ No se detectaron daños visibles con el umbral actual.")
-        st.info("💡 Prueba reduciendo el umbral de confianza en la barra lateral.")
+    if n_danos_totales == 0:
+        st.success("✅ No se detectaron daños visibles en ninguna de las imágenes analizadas.")
     else:
         df = pd.DataFrame([{
+            "Foto/Origen":  d.get("imagen", "Imagen"),
             "Tipo de Daño": d["clase_legible"],
             "Confianza":    formatear_confianza(d["confianza"]),
             "Zona":         d["zona"],
-        } for d in detecciones])
-        st.dataframe(df, width="stretch", hide_index=True)
+        } for d in todas_detecciones])
+        st.dataframe(df, use_container_width=True, hide_index=True)
 
     st.divider()
 
-    # Reporte LLM
-    st.markdown("### 🤖 Reporte con IA Explicativa")
+    # Reporte LLM consolidado
+    st.markdown("### 🤖 Reporte con IA Explicativa (Consolidado)")
     generar_btn = st.button(
-        "✨ Generar reporte con Groq",
+        "✨ Generar reporte consolidado con Groq",
         type="primary",
-        width="stretch",
+        use_container_width=True,
         key="btn_reporte",
     )
 
     if generar_btn:
         try:
-            with st.spinner("🧠 Analizando con Groq AI..."):
-                reporte = generar_reporte(detecciones)
+            with st.spinner("🧠 Analizando todos los daños con Groq AI..."):
+                reporte = generar_reporte(todas_detecciones)
 
             estado = reporte.get("estado", "Desconocido")
             justificacion = reporte.get("justificacion", "Sin información.")
@@ -466,7 +597,7 @@ def renderizar_resultados(img_original, img_anotada, detecciones, nombre_archivo
                 unsafe_allow_html=True,
             )
 
-            st.markdown("**Evaluación detallada:**")
+            st.markdown("**Evaluación detallada de la IA:**")
             st.markdown(
                 f"""
                 <div class="section-card">
@@ -479,41 +610,42 @@ def renderizar_resultados(img_original, img_anotada, detecciones, nombre_archivo
             )
 
             st.divider()
-            texto_reporte = generar_texto_reporte(estado, justificacion, detecciones)
+            texto_reporte = generar_texto_reporte(estado, justificacion, todas_detecciones)
             
             try:
-                # Generar PDF en memoria
                 pdf_bytes = bytes(generar_pdf_reporte(
-                    img_original, img_anotada, detecciones,
-                    estado, justificacion, nombre_archivo=nombre_archivo
+                    imagenes_analizadas=imagenes_analizadas,
+                    todas_detecciones=todas_detecciones,
+                    estado=estado,
+                    justificacion=justificacion,
+                    identificador_vehiculo="Inspeccion_Multiple"
                 ))
                 
-                # Crear dos columnas para los botones de descarga
                 col_d1, col_d2 = st.columns(2)
                 with col_d1:
                     st.download_button(
                         label="⬇️ Descargar Reporte PDF (Oficial)",
                         data=pdf_bytes,
-                        file_name=f"reporte_inspeccion_{nombre_archivo}.pdf",
+                        file_name="reporte_inspeccion_consolidado.pdf",
                         mime="application/pdf",
-                        width="stretch",
+                        use_container_width=True,
                     )
                 with col_d2:
                     st.download_button(
                         label="📄 Descargar Reporte TXT (Resumen)",
                         data=texto_reporte,
-                        file_name=f"reporte_vehiculo_{nombre_archivo}.txt",
+                        file_name="reporte_inspeccion_consolidado.txt",
                         mime="text/plain",
-                        width="stretch",
+                        use_container_width=True,
                     )
             except Exception as pdf_err:
                 st.warning(f"⚠️ No se pudo compilar el PDF: {pdf_err}. Ofreciendo versión de texto plano.")
                 st.download_button(
                     label="⬇️ Descargar reporte (.txt)",
                     data=texto_reporte,
-                    file_name=f"reporte_vehiculo_{nombre_archivo}.txt",
+                    file_name="reporte_inspeccion_consolidado.txt",
                     mime="text/plain",
-                    width="stretch",
+                    use_container_width=True,
                 )
 
         except RuntimeError as e:
@@ -523,71 +655,23 @@ def renderizar_resultados(img_original, img_anotada, detecciones, nombre_archivo
 
 
 # ============================================================
-# Lógica principal: imagen real o demo
+# Lógica principal de visualización
 # ============================================================
-if imagen_a_procesar is not None:
+if len(st.session_state.imagenes_analizadas) > 0:
     st.divider()
-
-    # Obtener extensión o usar .png para la cámara
-    sufijo = Path(nombre_archivo).suffix if nombre_archivo else ".png"
-    if not sufijo:
-        sufijo = ".png"
-
-    with tempfile.NamedTemporaryFile(
-        delete=False, suffix=sufijo
-    ) as tmp:
-        tmp.write(imagen_a_procesar.read())
-        ruta_temp = tmp.name
-
-    try:
-        if modo_demo:
-            # Modo demo con imagen cargada por el usuario (solo muestra la imagen real)
-            import cv2
-            img_bgr = cv2.imread(ruta_temp)
-            if img_bgr is None:
-                st.error("❌ No se pudo leer la imagen.")
-                st.stop()
-            img_original = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-            img_anotada = imagen_demo_anotada()  # boxes simuladas
-            detecciones = DETECCIONES_DEMO
-
-            st.info("🧪 Modo demo: se muestra tu imagen pero las detecciones son simuladas.")
-        else:
-            # Modo real: cargar modelo e inferir
-            from inference import detectar_danos, imagen_original_rgb
-            with st.spinner("🔍 Analizando imagen con YOLOv8..."):
-                img_original = imagen_original_rgb(ruta_temp)
-                img_anotada, detecciones = detectar_danos(
-                    ruta_temp,
-                    conf_umbral=conf_threshold,
-                )
-
-        renderizar_resultados(
-            img_original, img_anotada, detecciones,
-            nombre_archivo=Path(nombre_archivo).stem
-        )
-
-    except VehicleNotFoundError as e:
-        st.warning(f"🚫 {e}")
-        st.info("💡 El sistema requiere detectar al menos parte del vehículo (puerta, parachoques, capó, etc.). Asegúrate de que la foto esté bien enfocada.")
-    except Exception as e:
-        st.error(f"❌ Error inesperado: {e}")
-    finally:
-        try:
-            os.unlink(ruta_temp)
-        except Exception:
-            pass
+    renderizar_resultados(st.session_state.imagenes_analizadas)
 
 elif usar_demo_directo:
     # Demo sin imagen: usar imagen placeholder + detecciones simuladas
     st.divider()
     st.info("🧪 Modo demo sin imagen: mostrando detecciones simuladas sobre imagen de ejemplo.")
-    renderizar_resultados(
-        imagen_demo_rgb(),
-        imagen_demo_anotada(),
-        DETECCIONES_DEMO,
-        nombre_archivo="demo",
-    )
+    img_demo_info = [{
+        "nombre": "demo_imagen.png",
+        "original": imagen_demo_rgb(),
+        "anotada": imagen_demo_anotada(),
+        "detecciones": DETECCIONES_DEMO
+    }]
+    renderizar_resultados(img_demo_info)
 
 else:
     # Estado inicial — placeholder visual
@@ -602,10 +686,10 @@ else:
     ">
         <div style="font-size: 4.5rem; margin-bottom: 1.2rem; filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.3));">📷</div>
         <h3 style="font-size: 1.35rem; font-weight: 700; margin: 0; color: var(--text-color);">
-            Sube una imagen del vehículo para comenzar el análisis
+            Sube imágenes del vehículo para comenzar el análisis
         </h3>
         <p style="font-size: 0.95rem; opacity: 0.75; margin-top: 0.75rem; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.5;">
-            El sistema de visión artificial detectará automáticamente abolladuras, rayones, faros rotos, parachoques dañados, óxido y más.
+            El sistema de visión artificial detectará automáticamente abolladuras, rayones, faros rotos, parachoques dañados y más en múltiples capturas.
         </p>
     </div>
     """, unsafe_allow_html=True)
