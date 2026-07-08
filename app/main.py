@@ -404,8 +404,6 @@ with col_upload:
     # Limpiar video no seleccionado
     if not nombre_video_actual:
         st.session_state.videos_procesados = []
-    else:
-        st.session_state.videos_procesados = [nombre_video_actual]
 
     # 2. Procesar nuevos archivos subidos
     if archivos_subidos:
