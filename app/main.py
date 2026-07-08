@@ -23,7 +23,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).parent))
 
 from llm_report import generar_reporte
-from utils import ESTADO_CONFIG, formatear_confianza, nombre_clase_legible, generar_texto_reporte
+from utils import ESTADO_CONFIG, formatear_confianza, nombre_clase_legible
 from pdf_generator import generar_pdf_reporte
 
 # Importar excepción personalizada de inferencia (disponible aunque el modelo no esté cargado)
@@ -634,6 +634,7 @@ with col_info:
         <ul style="margin-top: 0rem; font-size: 0.92rem; line-height: 1.7; padding-left: 1.2rem; opacity: 0.85;">
             <li>Buena iluminación natural o artificial.</li>
             <li>El vehículo debe ser el elemento principal de la toma.</li>
+            <li>Al menos el 30% del volumen del vehículo debe ser visible en el encuadre para asegurar su reconocimiento.</li>
             <li>Evita ángulos muy extremos (menores a 45°).</li>
             <li>Resolución de imagen mínima recomendada: 640×640 px.</li>
         </ul>
@@ -746,7 +747,6 @@ def renderizar_resultados(imagenes_analizadas: list):
             )
 
             st.divider()
-            texto_reporte = generar_texto_reporte(estado, justificacion, todas_detecciones)
             
             try:
                 pdf_bytes = bytes(generar_pdf_reporte(
@@ -757,32 +757,15 @@ def renderizar_resultados(imagenes_analizadas: list):
                     identificador_vehiculo="Inspeccion_Multiple"
                 ))
                 
-                col_d1, col_d2 = st.columns(2)
-                with col_d1:
-                    st.download_button(
-                        label="⬇️ Descargar Reporte PDF (Oficial)",
-                        data=pdf_bytes,
-                        file_name="reporte_inspeccion_consolidado.pdf",
-                        mime="application/pdf",
-                        use_container_width=True,
-                    )
-                with col_d2:
-                    st.download_button(
-                        label="📄 Descargar Reporte TXT (Resumen)",
-                        data=texto_reporte,
-                        file_name="reporte_inspeccion_consolidado.txt",
-                        mime="text/plain",
-                        use_container_width=True,
-                    )
-            except Exception as pdf_err:
-                st.warning(f"⚠️ No se pudo compilar el PDF: {pdf_err}. Ofreciendo versión de texto plano.")
                 st.download_button(
-                    label="⬇️ Descargar reporte (.txt)",
-                    data=texto_reporte,
-                    file_name="reporte_inspeccion_consolidado.txt",
-                    mime="text/plain",
+                    label="⬇️ Descargar Reporte PDF (Oficial)",
+                    data=pdf_bytes,
+                    file_name="reporte_inspeccion_consolidado.pdf",
+                    mime="application/pdf",
                     use_container_width=True,
                 )
+            except Exception as pdf_err:
+                st.error(f"❌ No se pudo compilar el PDF: {pdf_err}. Por favor, intente de nuevo.")
 
         except RuntimeError as e:
             st.error(str(e))

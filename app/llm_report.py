@@ -145,24 +145,26 @@ def generar_reporte(detecciones: list, reintentos: int = 3) -> dict:
     n_danos = len(detecciones)
 
     prompt = f"""
-Eres un asistente experto en inspección vehicular. Recibirás una lista de daños
+Eres un asistente experto en inspección y peritaje vehicular. Recibirás una lista de daños
 detectados automáticamente por un modelo de visión por computadora (YOLO).
 
-Tu tarea es generar un informe en formato JSON estructurado.
+Tu tarea es generar un informe detallado en formato JSON estructurado.
 
 1. Determinar el estado general del vehículo usando EXACTAMENTE una de estas categorías:
    - "Sin daños": ningún daño detectado (lista vacía)
-   - "Leve": daños superficiales menores (como un rayón o una abolladura menor), sin comprometer la seguridad vial
-   - "Moderado": múltiples daños medianos o daños en zonas de carrocería (parachoques, puertas, cofre) sin riesgo de seguridad inminente
-   - "Grave": daños estructurales graves, o si hay daños concurrentes en componentes de seguridad crítica (por ejemplo, parabrisas agrietado Y luces rotas a la vez), o si el total de daños detectados es de 5 o más.
+   - "Leve": daños superficiales menores (como un rayón o una abolladura menor), sin comprometer la seguridad vial o la conducción
+   - "Moderado": múltiples daños de tamaño medio o daños en partes de la carrocería (parachoques, puertas, guardabarros, capó) sin riesgo inmediato para la conducción
+   - "Grave": daños estructurales severos, o si hay daños concurrentes en componentes de seguridad crítica (por ejemplo, vidrios o espejos agrietados Y luces rotas a la vez), o si el total de daños detectados es de 5 o más.
 
-2. Redactar una justificación breve (máximo 100 palabras) en español que explique
-   por qué asignaste ese estado.
+2. Redactar una justificación explicativa y descriptiva (entre 100 y 250 palabras) en español.
+   DEBES enumerar, describir e indicar la localización de cada uno de los daños detectados en la lista (por ejemplo, "un rayón en la puerta lateral", "una abolladura en el guardabarros", etc.). 
+   Explica claramente qué piezas están afectadas y cómo la combinación de estos daños justifica la categoría de estado asignada. Evita frases genéricas o cortas como "se superó el límite".
 
 REGLAS ESTRICTAS:
-- Basa tu análisis ÚNICAMENTE en los daños de la lista. No inventes ni supongas causas.
+- Basa tu análisis ÚNICAMENTE en los daños de la lista. Describe las piezas afectadas y su ubicación de acuerdo a los datos provistos.
 - Si hay daños concurrentes en piezas críticas de seguridad (faros, parabrisas, espejos) o 5 o más daños totales, cataloga obligatoriamente el estado como "Grave".
-- No menciones marcas, modelos ni valores económicos.
+- Sé profesional, técnico y detallado en la descripción de cada daño.
+- No inventes marcas, modelos ni valores monetarios de reparación.
 - Responde obligatoriamente en formato JSON válido con las llaves "estado" y "justificacion".
 
 Número de daños detectados: {n_danos}
@@ -187,7 +189,7 @@ Daños detectados (JSON):
                     }
                 ],
                 temperature=0.2,
-                max_tokens=300,
+                max_tokens=600,
                 response_format={"type": "json_object"}
             )
             

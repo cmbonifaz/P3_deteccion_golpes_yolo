@@ -42,8 +42,8 @@ _modelo = None
 _modelo_general = None  # YOLOv8n entrenado en COCO (validación de vehículos)
 
 # Clases de vehículos en el dataset COCO
-# car=2, motorcycle=3, airplane=4, bus=5, train=6, truck=7, boat=8
-VEHICLE_CLASS_IDS = {2, 3, 5, 7}  # car, motorcycle, bus, truck
+# car=2, bus=5, truck=7
+VEHICLE_CLASS_IDS = {2, 5, 7}  # car, bus, truck
 VEHICLE_CONF_MIN  = 0.15          # umbral bajo para detectar vehículos parcialmente visibles
 
 
@@ -123,8 +123,9 @@ def detectar_danos(ruta_imagen: str, conf_umbral: float = CONF_DEFAULT) -> tuple
     # ── Etapa 1: Validar vehículo con COCO ───────────────────────────────────
     if not validar_vehiculo(ruta_imagen):
         raise VehicleNotFoundError(
-            "No se detectó un vehículo en la imagen.\n"
-            "Por favor sube una fotografía de un automóvil, camioneta, moto o bus."
+            "No se detectó un vehículo en la imagen. Por favor sube una fotografía de un automóvil, "
+            "camioneta o autobús. Nota: Se requiere que al menos el 30% del volumen del vehículo esté "
+            "visible dentro del encuadre para asegurar su reconocimiento."
         )
 
     # ── Etapa 2: Detectar daños con el modelo especializado ──────────────────
