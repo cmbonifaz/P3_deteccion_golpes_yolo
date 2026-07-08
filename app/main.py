@@ -522,34 +522,37 @@ with col_upload:
                         fps = 30.0
                     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
                     
+                    # Extraer exactamente 10 frames uniformemente distribuidos
+                    num_frames_objetivo = 10
+                    step = max(1.0, total_frames / num_frames_objetivo)
+                    
                     frames_extraidos = []
-                    segundo = 0
-                    while True:
-                        frame_idx = int(segundo * fps)
+                    for i in range(num_frames_objetivo):
+                        frame_idx = int(i * step)
                         if frame_idx >= total_frames:
                             break
                         
                         cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
                         exito, frame = cap.read()
                         if not exito:
-                            break
+                            continue
                             
                         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        segundo = round(frame_idx / fps, 1)
                         frames_extraidos.append({
                             "segundo": segundo,
                             "imagen": frame_rgb
                         })
-                        segundo += 1
                         
                     cap.release()
                     
                     # Limitar frames si exceden el espacio disponible
                     disp_libre = 10 - len(st.session_state.imagenes_analizadas)
                     if len(frames_extraidos) > disp_libre:
-                        st.warning(f"⚠️ El video tiene {len(frames_extraidos)} segundos, pero solo queda espacio para {disp_libre} frames. Se analizarán los primeros {disp_libre} segundos.")
                         frames_extraidos = frames_extraidos[:disp_libre]
                         
                     frames_procesados_con_exito = 0
+                    frames_con_danos = 0
                     
                     for item in frames_extraidos:
                         seg = item["segundo"]
@@ -570,16 +573,22 @@ with col_upload:
                                     "detecciones": DETECCIONES_DEMO
                                 })
                                 frames_procesados_con_exito += 1
+                                frames_con_danos += 1
                             else:
                                 from inference import detectar_danos
                                 with st.spinner(f"🔍 Analizando frame en segundo {seg}..."):
                                     img_anotada, detecciones = detectar_danos(ruta_frame_temp, conf_umbral=conf_threshold)
-                                    st.session_state.imagenes_analizadas.append({
-                                        "nombre": nombre_frame,
-                                        "original": img_rgb,
-                                        "anotada": img_anotada,
-                                        "detecciones": detecciones
-                                    })
+                                    
+                                    # Solo guardar el frame si tiene detecciones de daños
+                                    if len(detecciones) > 0:
+                                        st.session_state.imagenes_analizadas.append({
+                                            "nombre": nombre_frame,
+                                            "original": img_rgb,
+                                            "anotada": img_anotada,
+                                            "detecciones": detecciones
+                                        })
+                                        frames_con_danos += 1
+                                    
                                     frames_procesados_con_exito += 1
                         except VehicleNotFoundError:
                             pass
@@ -593,8 +602,10 @@ with col_upload:
                                 
                     if frames_procesados_con_exito == 0:
                         st.warning("🚫 No se detectó ningún vehículo en ningún frame del video. Asegúrate de enfocar el automóvil.")
+                    elif frames_con_danos == 0:
+                        st.info("✅ Se analizó el video por completo y no se detectaron daños en ningún frame.")
                     else:
-                        st.success(f"✅ Se analizaron {frames_procesados_con_exito} segundos del video con éxito.")
+                        st.success(f"✅ Se analizaron los frames y se detectaron daños en {frames_con_danos} de ellos.")
                         
                     st.session_state.videos_procesados.append(nombre_video_actual)
             except Exception as e:
