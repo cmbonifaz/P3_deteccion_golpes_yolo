@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from llm_report import generar_reporte
 from utils import ESTADO_CONFIG, formatear_confianza, nombre_clase_legible
 from pdf_generator import generar_pdf_reporte
+from historial import guardar_en_historial, obtener_historial, obtener_pdf_historial, eliminar_de_historial
 
 # Importar excepción personalizada de inferencia (disponible aunque el modelo no esté cargado)
 try:
@@ -66,11 +67,12 @@ st.markdown("""
         font-family: 'Outfit', sans-serif; 
     }
 
-    /* Ocultar barra superior por defecto de Streamlit y botones nativos */
-    header { visibility: hidden !important; }
-    #MainMenu { visibility: hidden !important; }
+    /* Ocultar barra superior por defecto de Streamlit y botones nativos, manteniendo botón de sidebar */
+    header { background: transparent !important; }
+    [data-testid="stHeaderActionElements"], [data-testid="stHeaderMainMenu"], #MainMenu, .stDeployButton {
+        display: none !important;
+    }
     footer { visibility: hidden !important; }
-    .stDeployButton { display: none !important; }
 
     /* Ajustar padding superior */
     .block-container {
@@ -241,9 +243,15 @@ st.markdown("""
         background: rgba(30, 41, 59, 0.5) !important;
     }
 
-    /* Ocultar elementos extra de carga */
-    [data-testid="stFileUploader"] section {
-        background: transparent !important;
+    /* Empujar la última pestaña (Historial) al extremo derecho */
+    div[role="tablist"] button:last-of-type {
+        margin-left: auto !important;
+    }
+
+    /* Desactivar escritura en los selectbox/desplegables */
+    div[data-baseweb="select"] input {
+        pointer-events: none !important;
+        caret-color: transparent !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -299,34 +307,10 @@ def imagen_demo_anotada() -> np.ndarray:
     return img
 
 
-# ============================================================
-# Sidebar — modo demo
-# ============================================================
-with st.sidebar:
-    st.markdown("## ⚙️ Configuración")
-    modelo_path = Path(__file__).parent.parent / "models" / "best.pt"
-    modelo_listo = modelo_path.exists()
-
-    if modelo_listo:
-        st.success("✅ Modelo cargado")
-        modo_demo = st.toggle("Modo Demo", value=False,
-                              help="Usar detecciones simuladas en lugar del modelo real")
-    else:
-        st.warning("⚠️ Modelo no encontrado")
-        st.caption("`models/best.pt` no existe aún.\nActivando modo demo automáticamente.")
-        modo_demo = True
-
-    st.divider()
-    st.markdown("**Umbral de confianza**")
-    conf_threshold = st.slider(
-        "Umbral de confianza",
-        0.1, 0.9, 0.4, 0.05,
-        label_visibility="collapsed",
-        help="Mínima confianza para mostrar una detección"
-    )
-    st.divider()
-    st.markdown("**Sobre el sistema**")
-    st.caption("YOLOv8s + Groq AI\n\n14 clases de daño vehicular\n\n~13,000 imágenes de entrenamiento")
+modelo_path = Path(__file__).parent.parent / "models" / "best.pt"
+modelo_listo = modelo_path.exists()
+modo_demo = not modelo_listo
+conf_threshold = 0.4
 
 
 # ============================================================
@@ -353,15 +337,26 @@ if modo_demo:
     """, unsafe_allow_html=True)
 
 
-# ============================================================
-# Zona de carga de imagen
-# ============================================================
+st.markdown("<h3 style='margin-top: 15px; margin-bottom: 5px; font-size: 1.2rem; font-weight: 600;'>📋 Datos de la Inspección (Obligatorios)</h3>", unsafe_allow_html=True)
+f_col1, f_col2 = st.columns(2)
+with f_col1:
+    placa = st.text_input("Placa / Matrícula *", placeholder="Ej. ABC-1234", key="form_placa").strip()
+    marca = st.text_input("Marca del Vehículo *", placeholder="Ej. Toyota", key="form_marca").strip()
+with f_col2:
+    modelo = st.text_input("Modelo del Vehículo *", placeholder="Ej. Hilux", key="form_modelo").strip()
+    inspector = st.text_input("Nombre del Inspector *", placeholder="Ej. Pedro Pérez", key="form_inspector").strip()
+
 st.markdown("### 📤 Cargar imagen(es) del vehículo")
 
 col_upload, col_info = st.columns([2, 1])
 
 with col_upload:
-    tab_subir, tab_camara, tab_video = st.tabs(["📁 Subir Archivo(s)", "📷 Usar Cámara", "🎥 Subir Video"])
+    tab_subir, tab_camara, tab_video, tab_historial = st.tabs([
+        "📁 Subir Archivo(s)", 
+        "📷 Usar Cámara", 
+        "🎥 Subir Video", 
+        "📁 Historial de Reportes"
+    ])
     
     archivos_subidos = None
     captura_camara = None
@@ -383,12 +378,121 @@ with col_upload:
         )
 
     with tab_video:
-        archivo_video = st.file_uploader(
-            label="Arrastra o selecciona un archivo de video",
-            type=["mp4", "mov", "avi", "mkv", "webm"],
-            help="Formatos soportados: MP4, MOV, AVI, MKV, WEBM (Muestreo de 1 frame/segundo)",
-            label_visibility="collapsed",
-        )
+        col_vid_file, col_vid_mode = st.columns([2, 1])
+        with col_vid_file:
+            archivo_video = st.file_uploader(
+                label="Arrastra o selecciona un archivo de video",
+                type=["mp4", "mov", "avi", "mkv", "webm"],
+                help="Formatos soportados: MP4, MOV, AVI, MKV, WEBM",
+                label_visibility="collapsed",
+            )
+        with col_vid_mode:
+            modo_analisis_video = st.selectbox(
+                "Nivel de análisis de video:",
+                options=["Rápido (10 frames)", "Normal (20 frames)", "Detallado (40 frames)"],
+                index=1,
+                help="Determina el número total de frames que se extraerán y analizarán a lo largo de la duración total del video."
+            )
+            
+            if archivo_video is not None:
+                st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+                if st.button("🔍 Analizar Video", use_container_width=True, key="btn_analizar_video"):
+                    nombre_vid = archivo_video.name
+                    if nombre_vid in st.session_state.videos_procesados:
+                        st.session_state.videos_procesados.remove(nombre_vid)
+                    st.session_state.imagenes_analizadas = [
+                        img for img in st.session_state.imagenes_analizadas
+                        if not img["nombre"].startswith(nombre_vid)
+                    ]
+                    st.rerun()
+
+    # Definir diálogo de confirmación de eliminación
+    @st.dialog("⚠️ ¿Confirmar Eliminación?")
+    def confirmar_eliminacion_dialog(reporte_id, pdf_nombre):
+        st.markdown(f"¿Estás seguro de que deseas eliminar permanentemente este reporte?")
+        st.markdown(f"**Archivo:** `{pdf_nombre}`")
+        st.warning("Esta acción eliminará el registro de la base de datos de Supabase, el PDF de la nube y la copia local. No se puede deshacer.")
+        st.markdown("<br>", unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Sí, eliminar", type="primary", use_container_width=True, key=f"btn_yes_del_modal_{reporte_id}"):
+                with st.spinner("Eliminando..."):
+                    if eliminar_de_historial(reporte_id):
+                        st.rerun()
+        with col2:
+            if st.button("Cancelar", use_container_width=True, key=f"btn_no_del_modal_{reporte_id}"):
+                st.rerun()
+
+    with tab_historial:
+        st.markdown("### 📁 Historial de Reportes Guardados")
+        historial_lista = obtener_historial()
+        if not historial_lista:
+            st.info("No hay reportes guardados aún.")
+        else:
+            # Filtros básicos del historial e índice de ordenación
+            st.markdown("<div style='margin-top: 10px; margin-bottom: 5px; font-weight: 500;'>🔍 Filtrar y Ordenar Reportes</div>", unsafe_allow_html=True)
+            col_filt1, col_filt2, col_filt3, col_filt4 = st.columns(4)
+            with col_filt1:
+                filtro_placa = st.text_input("Filtrar por Placa", placeholder="Ej. ABC-1234", key="filt_placa").strip().lower()
+            with col_filt2:
+                estados_disponibles = ["Todos", "Leve", "Moderado", "Grave"]
+                filtro_estado = st.selectbox("Filtrar por Estado", options=estados_disponibles, key="filt_estado")
+            with col_filt3:
+                inspectores_existentes = sorted(list(set(r['inspector'] for r in historial_lista if r.get('inspector'))))
+                filtro_inspector = st.selectbox("Filtrar por Inspector", options=["Todos"] + inspectores_existentes, key="filt_inspector")
+            with col_filt4:
+                ordenar_por = st.selectbox("Ordenar por Fecha", options=["Más recientes primero", "Más antiguos primero"], key="filt_orden")
+                
+            # Aplicar filtros a la lista de reportes
+            historial_filtrado = []
+            for r in historial_lista:
+                # Filtrar por placa
+                if filtro_placa and filtro_placa not in r['placa'].lower():
+                    continue
+                # Filtrar por estado
+                if filtro_estado != "Todos" and r['estado'] != filtro_estado:
+                    continue
+                # Filtrar por inspector
+                if filtro_inspector != "Todos" and r.get('inspector') != filtro_inspector:
+                    continue
+                historial_filtrado.append(r)
+                
+            # Aplicar ordenación
+            if ordenar_por == "Más antiguos primero":
+                historial_filtrado = sorted(historial_filtrado, key=lambda x: x.get("timestamp", 0))
+            else:
+                historial_filtrado = sorted(historial_filtrado, key=lambda x: x.get("timestamp", 0), reverse=True)
+                
+            if not historial_filtrado:
+                st.info("Ningún reporte coincide con los criterios de búsqueda.")
+            else:
+                for r in historial_filtrado[:10]:
+                    estado_emoji = ESTADO_CONFIG.get(r['estado'], {}).get('emoji', '❔')
+                    config_color = ESTADO_CONFIG.get(r['estado'], {}).get('color', '#6b7280')
+                    label = f"{estado_emoji} Placa: {r['placa']} | Vehículo: {r['marca']} {r['modelo']} | Fecha: {r['fecha_hora']}"
+                    with st.expander(label):
+                        c1, c2, c3 = st.columns([2, 2, 1.2])
+                        with c1:
+                            st.markdown(f"**Inspector:** {r['inspector']}")
+                            st.markdown(f"**Estado General:** <span style='color:{config_color};font-weight:bold;'>{r['estado']}</span>", unsafe_allow_html=True)
+                        with c2:
+                            st.markdown(f"**Fecha y Hora:** {r['fecha_hora']}")
+                            st.markdown(f"**Nombre de archivo:** `{r['pdf_nombre']}`")
+                        with c3:
+                            pdf_data = obtener_pdf_historial(r['pdf_nombre'])
+                            if pdf_data:
+                                st.download_button(
+                                    label="⬇️ Descargar PDF",
+                                    data=pdf_data,
+                                    file_name=r['pdf_nombre'],
+                                    mime="application/pdf",
+                                    key=f"btn_hist_tab_{r['id']}",
+                                    use_container_width=True
+                                )
+                            
+                            st.write("") # Espaciador
+                            if st.button("🗑️ Eliminar", key=f"btn_del_req_{r['id']}", use_container_width=True, type="secondary"):
+                                confirmar_eliminacion_dialog(r['id'], r['pdf_nombre'])
         
     # 1. Sincronizar archivos eliminados del uploader y video para actualizar el estado
     nombres_subidos = [f.name for f in archivos_subidos] if archivos_subidos else []
@@ -522,8 +626,14 @@ with col_upload:
                         fps = 30.0
                     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
                     
-                    # Extraer exactamente 20 frames uniformemente distribuidos
+                    # Extraer frames uniformemente distribuidos según el nivel de análisis
                     num_frames_objetivo = 20
+                    if 'modo_analisis_video' in locals():
+                        if "Rápido" in modo_analisis_video:
+                            num_frames_objetivo = 10
+                        elif "Detallado" in modo_analisis_video:
+                            num_frames_objetivo = 40
+                            
                     step = max(1.0, total_frames / num_frames_objetivo)
                     
                     frames_extraidos = []
@@ -645,7 +755,7 @@ with col_info:
 # ============================================================
 # Función de renderizado de resultados (compartida entre modos)
 # ============================================================
-def renderizar_resultados(imagenes_analizadas: list):
+def renderizar_resultados(imagenes_analizadas: list, placa: str = "S/N", marca: str = "S/D", modelo: str = "S/D", inspector: str = "S/D"):
     """Renderiza galería, tabla consolidada y el reporte LLM de múltiples imágenes."""
 
     st.markdown("### 🖼️ Registro Fotográfico de Inspección")
@@ -712,7 +822,10 @@ def renderizar_resultados(imagenes_analizadas: list):
         key="btn_reporte",
     )
 
-    if generar_btn:
+    if generar_btn and (not placa or not marca or not modelo or not inspector):
+        st.error("⚠️ Todos los campos de los Datos de la Inspección (Placa, Marca, Modelo e Inspector) son obligatorios para generar el reporte.")
+
+    if generar_btn and placa and marca and modelo and inspector:
         try:
             with st.spinner("🧠 Analizando todos los daños con Groq AI..."):
                 reporte = generar_reporte(todas_detecciones)
@@ -754,8 +867,21 @@ def renderizar_resultados(imagenes_analizadas: list):
                     todas_detecciones=todas_detecciones,
                     estado=estado,
                     justificacion=justificacion,
-                    identificador_vehiculo="Inspeccion_Multiple"
+                    placa=placa,
+                    marca=marca,
+                    modelo=modelo,
+                    inspector=inspector
                 ))
+                
+                # Guardar automáticamente en el historial local
+                guardar_en_historial(
+                    pdf_bytes=pdf_bytes,
+                    placa=placa,
+                    marca=marca,
+                    modelo=modelo,
+                    inspector=inspector,
+                    estado=estado
+                )
                 
                 st.download_button(
                     label="⬇️ Descargar Reporte PDF (Oficial)",
@@ -778,7 +904,13 @@ def renderizar_resultados(imagenes_analizadas: list):
 # ============================================================
 if len(st.session_state.imagenes_analizadas) > 0:
     st.divider()
-    renderizar_resultados(st.session_state.imagenes_analizadas)
+    renderizar_resultados(
+        st.session_state.imagenes_analizadas,
+        placa=placa,
+        marca=marca,
+        modelo=modelo,
+        inspector=inspector
+    )
 
 elif usar_demo_directo:
     # Demo sin imagen: usar imagen placeholder + detecciones simuladas
@@ -790,7 +922,13 @@ elif usar_demo_directo:
         "anotada": imagen_demo_anotada(),
         "detecciones": DETECCIONES_DEMO
     }]
-    renderizar_resultados(img_demo_info)
+    renderizar_resultados(
+        img_demo_info,
+        placa=placa,
+        marca=marca,
+        modelo=modelo,
+        inspector=inspector
+    )
 
 else:
     # Estado inicial — placeholder visual

@@ -1,0 +1,25 @@
+[
+  {
+    "id": "1783531391_PFG5356",
+    "timestamp": 1783531391,
+    "fecha_hora": "08/07/2026 12:23:11",
+    "placa": "PFG5356",
+    "marca": "KIA",
+    "modelo": "RIO",
+    "inspector": "CHRISTIAN",
+    "estado": "Grave",
+    "pdf_nombre": "reporte_PFG5356_20260708_122311.pdf"
+  },
+  {
+    "id": "1783563924_PFG5356",
+    "timestamp": 1783563924,
+    "fecha_hora": "08/07/2026 21:25:24",
+    "placa": "PFG5356",
+    "marca": "kia",
+    "modelo": "rio",
+    "inspector": "CHRISTIAN",
+    "estado": "Grave",
+    "pdf_nombre": "reporte_PFG5356_20260708_212524.pdf",
+    "pdf_url": "https://crsjpquirnkvzwilpfel.supabase.co/storage/v1/object/public/reportes-inspeccion/reporte_PFG5356_20260708_212524.pdf"
+  }
+]

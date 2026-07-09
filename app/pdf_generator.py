@@ -37,7 +37,8 @@ class ReportePDF(FPDF):
         self.cell(0, 10, f"Pagina {self.page_no()}/{{nb}} | Reporte Tecnico Oficial - Confidencial", align="L")
         self.cell(0, 10, "YOLOv8 + Groq AI", align="R")
 
-def generar_pdf_reporte(imagenes_analizadas: list, todas_detecciones: list, estado: str, justificacion: str, identificador_vehiculo: str = "Vehiculo"):
+def generar_pdf_reporte(imagenes_analizadas: list, todas_detecciones: list, estado: str, justificacion: str, 
+                         placa: str = "S/N", marca: str = "S/D", modelo: str = "S/D", inspector: str = "S/D"):
     """
     Genera un informe PDF profesional con múltiples imágenes, tablas y análisis.
     Devuelve los bytes del PDF generado.
@@ -55,7 +56,21 @@ def generar_pdf_reporte(imagenes_analizadas: list, todas_detecciones: list, esta
     pdf.set_font("helvetica", "", 9)
     pdf.set_text_color(100, 116, 139)
     fecha_str = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-    pdf.cell(0, 5, f"Fecha de emision: {fecha_str} | ID Vehiculo: {identificador_vehiculo}", ln=True)
+    pdf.cell(0, 5, f"Fecha de emision: {fecha_str}", ln=True)
+    pdf.ln(3)
+    
+    # Datos de la Inspección
+    pdf.set_fill_color(248, 250, 252)
+    pdf.set_draw_color(226, 232, 240)
+    pdf.set_text_color(51, 65, 85)
+    
+    pdf.set_font("helvetica", "B", 9)
+    pdf.cell(95, 6, f" Placa: {placa.upper()}", border=1, fill=True)
+    pdf.cell(95, 6, f" Inspector: {inspector}", border=1, fill=True, ln=True)
+    
+    pdf.set_font("helvetica", "", 9)
+    pdf.cell(95, 6, f" Marca: {marca}", border=1)
+    pdf.cell(95, 6, f" Modelo: {modelo}", border=1, ln=True)
     pdf.ln(5)
     
     # 2. ESTADO DEL VEHÍCULO (Badge grande)
