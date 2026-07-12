@@ -19,10 +19,14 @@ CREATE TABLE IF NOT EXISTS public.reportes (
     modelo VARCHAR(100) NOT NULL,
     inspector VARCHAR(100) NOT NULL,
     estado VARCHAR(20) NOT NULL,
+    justificacion TEXT,
     pdf_nombre TEXT NOT NULL,
     pdf_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- NOTA: Para bases de datos ya existentes, ejecuta tambien:
+-- ALTER TABLE public.reportes ADD COLUMN IF NOT EXISTS justificacion TEXT;
 
 -- Habilitar Row Level Security (RLS)
 ALTER TABLE public.reportes ENABLE ROW LEVEL SECURITY;

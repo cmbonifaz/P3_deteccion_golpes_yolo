@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 main.py
 -------
@@ -54,6 +55,10 @@ if "ultimo_cam_bytes" not in st.session_state:
     st.session_state.ultimo_cam_bytes = None
 if "videos_procesados" not in st.session_state:
     st.session_state.videos_procesados = []
+if "reporte_actual" not in st.session_state:
+    st.session_state.reporte_actual = None
+if "en_historial" not in st.session_state:
+    st.session_state.en_historial = False
 
 
 # ============================================================
@@ -253,6 +258,37 @@ st.markdown("""
         pointer-events: none !important;
         caret-color: transparent !important;
     }
+    /* Ocultar elementos de carga cuando la pestaña Historial (tab-3) está seleccionada */
+    div[data-testid="stAppViewBlockContainer"]:has(button[id$="-tab-3"][aria-selected="true"]) .uploader-header,
+    .main:has(button[id$="-tab-3"][aria-selected="true"]) .uploader-header {
+        display: none !important;
+    }
+    
+    div[data-testid="stHorizontalBlock"]:has(button[id$="-tab-3"][aria-selected="true"]) div[data-testid="column"]:nth-child(2) {
+        display: none !important;
+    }
+    
+    div[data-testid="stHorizontalBlock"]:has(button[id$="-tab-3"][aria-selected="true"]) div[data-testid="column"]:nth-child(1) {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    div[data-testid="stAppViewBlockContainer"]:has(button[id$="-tab-3"][aria-selected="true"]) .initial-placeholder,
+    div[data-testid="stAppViewBlockContainer"]:has(button[id$="-tab-3"][aria-selected="true"]) .results-container,
+    div[data-testid="stAppViewBlockContainer"]:has(button[id$="-tab-3"][aria-selected="true"]) .results-divider,
+    .main:has(button[id$="-tab-3"][aria-selected="true"]) .initial-placeholder,
+    .main:has(button[id$="-tab-3"][aria-selected="true"]) .results-container,
+    .main:has(button[id$="-tab-3"][aria-selected="true"]) .results-divider {
+        display: none !important;
+    }
+
+    /* Ocultar botones ocultos de limpieza y reset */
+    div[data-testid="stButton"]:has(button[aria-label="HIDDEN_CLEAR_ACTION"]),
+    div[data-testid="stButton"]:has(button[aria-label="HIDDEN_RESET_HISTORIAL"]),
+    div[data-testid="stButton"]:has(button[aria-label="__HIDDEN_CLEAR_ACTION__"]) {
+        display: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -346,7 +382,87 @@ with f_col2:
     modelo = st.text_input("Modelo del Vehículo *", placeholder="Ej. Hilux", key="form_modelo").strip()
     inspector = st.text_input("Nombre del Inspector *", placeholder="Ej. Pedro Pérez", key="form_inspector").strip()
 
-st.markdown("### 📤 Cargar imagen(es) del vehículo")
+st.markdown("<div class='uploader-header'><h3 style='margin-top: 15px; margin-bottom: 15px; font-size: 1.35rem; font-weight: 700;'>📤 Cargar imagen(es) del vehículo</h3></div>", unsafe_allow_html=True)
+
+# Botón oculto para limpiar la inspección al ir a Historial
+if st.button("HIDDEN_CLEAR_ACTION", key="hidden_clear_btn"):
+    st.session_state.imagenes_analizadas = []
+    st.session_state.ultimo_cam_bytes = None
+    st.session_state.reporte_actual = None
+    st.session_state.en_historial = True
+    st.rerun()
+
+# Botón oculto para resetear el estado de visualización cuando se sale del Historial
+if st.button("HIDDEN_RESET_HISTORIAL", key="hidden_reset_historial_btn"):
+    st.session_state.en_historial = False
+    st.rerun()
+
+# JS para autodetectar cambio a pestaña Historial (tab-3) y hacer click en el botón oculto
+import streamlit.components.v1 as components
+components.html("""
+<script>
+    const parentDoc = window.parent.document;
+    
+    function hideActionButtons() {
+        const buttons = parentDoc.querySelectorAll('button');
+        buttons.forEach(btn => {
+            if (btn.textContent && (
+                btn.textContent.includes('HIDDEN_CLEAR_ACTION') || 
+                btn.textContent.includes('HIDDEN_RESET_HISTORIAL') ||
+                btn.textContent.includes('__HIDDEN_CLEAR_ACTION__')
+            )) {
+                const container = btn.closest('div[data-testid="stButton"]');
+                if (container) {
+                    container.style.setProperty('display', 'none', 'important');
+                }
+                btn.style.setProperty('display', 'none', 'important');
+            }
+        });
+    }
+
+    function setupObserver() {
+        hideActionButtons();
+        
+        const tabs = parentDoc.querySelectorAll('button[role="tab"]');
+        if (tabs.length === 0) {
+            setTimeout(setupObserver, 300);
+            return;
+        }
+
+        tabs.forEach((tab, index) => {
+            if (tab.getAttribute('data-clear-listener') === 'true') return;
+            tab.setAttribute('data-clear-listener', 'true');
+            
+            tab.addEventListener('click', () => {
+                if (index === 3) {
+                    const btn = Array.from(parentDoc.querySelectorAll('button')).find(el => 
+                        el.textContent && el.textContent.includes('HIDDEN_CLEAR_ACTION')
+                    );
+                    if (btn) {
+                        btn.click();
+                    }
+                } else {
+                    const btn = Array.from(parentDoc.querySelectorAll('button')).find(el => 
+                        el.textContent && el.textContent.includes('HIDDEN_RESET_HISTORIAL')
+                    );
+                    if (btn) {
+                        btn.click();
+                    }
+                }
+            });
+        });
+    }
+
+    // Usar MutationObserver para ocultarlo de forma instantánea
+    const observer = new MutationObserver(() => {
+        hideActionButtons();
+    });
+    observer.observe(parentDoc.body, { childList: true, subtree: true });
+
+    setInterval(hideActionButtons, 100);
+    setupObserver();
+</script>
+""", height=0)
 
 col_upload, col_info = st.columns([2, 1])
 
@@ -442,7 +558,31 @@ with col_upload:
                 filtro_inspector = st.selectbox("Filtrar por Inspector", options=["Todos"] + inspectores_existentes, key="filt_inspector")
             with col_filt4:
                 ordenar_por = st.selectbox("Ordenar por Fecha", options=["Más recientes primero", "Más antiguos primero"], key="filt_orden")
-                
+
+            # Filtro por fecha (segunda fila de filtros)
+            col_filt_fmodo, col_filt_fval = st.columns([1, 3])
+            with col_filt_fmodo:
+                modo_fecha = st.selectbox(
+                    "🗓️ Filtro de Fecha",
+                    options=["Sin filtro de fecha", "Fecha exacta", "Rango de fechas"],
+                    key="filt_fecha_modo"
+                )
+            with col_filt_fval:
+                fecha_exacta = None
+                fecha_desde = None
+                fecha_hasta = None
+                if modo_fecha == "Fecha exacta":
+                    fecha_exacta = st.date_input(
+                        "Selecciona fecha:", key="filt_fecha_exacta",
+                        value=None, label_visibility="collapsed"
+                    )
+                elif modo_fecha == "Rango de fechas":
+                    col_fd, col_fh = st.columns(2)
+                    with col_fd:
+                        fecha_desde = st.date_input("Desde:", key="filt_fecha_desde", value=None)
+                    with col_fh:
+                        fecha_hasta = st.date_input("Hasta:", key="filt_fecha_hasta", value=None)
+
             # Aplicar filtros a la lista de reportes
             historial_filtrado = []
             for r in historial_lista:
@@ -455,6 +595,22 @@ with col_upload:
                 # Filtrar por inspector
                 if filtro_inspector != "Todos" and r.get('inspector') != filtro_inspector:
                     continue
+                # Filtrar por fecha
+                if modo_fecha != "Sin filtro de fecha":
+                    from datetime import datetime as _dt
+                    try:
+                        ts = r.get("timestamp", 0)
+                        fecha_rep = _dt.fromtimestamp(ts).date()
+                        if modo_fecha == "Fecha exacta" and fecha_exacta:
+                            if fecha_rep != fecha_exacta:
+                                continue
+                        elif modo_fecha == "Rango de fechas":
+                            if fecha_desde and fecha_rep < fecha_desde:
+                                continue
+                            if fecha_hasta and fecha_rep > fecha_hasta:
+                                continue
+                    except Exception:
+                        pass
                 historial_filtrado.append(r)
                 
             # Aplicar ordenación
@@ -493,6 +649,20 @@ with col_upload:
                             st.write("") # Espaciador
                             if st.button("🗑️ Eliminar", key=f"btn_del_req_{r['id']}", use_container_width=True, type="secondary"):
                                 confirmar_eliminacion_dialog(r['id'], r['pdf_nombre'])
+                        # Mostrar evaluacion IA si esta disponible
+                        justif = r.get("justificacion") or ""
+                        if justif.strip():
+                            st.markdown(
+                                "<div style='margin-top:0.5rem;'><strong>🤖 Evaluación de IA:</strong></div>",
+                                unsafe_allow_html=True
+                            )
+                            st.markdown(
+                                f"<div style='font-size:0.88rem; opacity:0.85; "
+                                f"background:rgba(99,102,241,0.07); border-left:3px solid #6366f1; "
+                                f"padding:0.6rem 0.9rem; border-radius:6px; margin-top:0.3rem;'>"
+                                f"{justif}</div>",
+                                unsafe_allow_html=True
+                            )
         
     # 1. Sincronizar archivos eliminados del uploader y video para actualizar el estado
     nombres_subidos = [f.name for f in archivos_subidos] if archivos_subidos else []
@@ -744,7 +914,7 @@ with col_info:
         <ul style="margin-top: 0rem; font-size: 0.92rem; line-height: 1.7; padding-left: 1.2rem; opacity: 0.85;">
             <li>Buena iluminación natural o artificial.</li>
             <li>El vehículo debe ser el elemento principal de la toma.</li>
-            <li>Al menos el 30% del volumen del vehículo debe ser visible en el encuadre para asegurar su reconocimiento.</li>
+            <li><strong>Cobertura mínima por ángulo:</strong> vista frontal ≥ 70% del panel frontal visible, vistas laterales ≥ 60% de cada panel (izquierdo y derecho), vista trasera ≥ 70% del panel trasero visible en el encuadre.</li>
             <li>Evita ángulos muy extremos (menores a 45°).</li>
             <li>Resolución de imagen mínima recomendada: 640×640 px.</li>
         </ul>
@@ -759,33 +929,39 @@ def renderizar_resultados(imagenes_analizadas: list, placa: str = "S/N", marca: 
     """Renderiza galería, tabla consolidada y el reporte LLM de múltiples imágenes."""
 
     st.markdown("### 🖼️ Registro Fotográfico de Inspección")
-    
-    # Selector de imagen para ver en detalle
-    nombres_fotos = [img["nombre"] for img in imagenes_analizadas]
-    
-    col_sel, col_limpiar = st.columns([3, 1])
-    with col_sel:
-        foto_seleccionada = st.selectbox(
-            "🔍 Selecciona una imagen para ver detalles de anotación:",
-            nombres_fotos,
-            label_visibility="collapsed"
+
+    # Cabecera con contador y boton limpiar
+    col_titulo, col_limpiar = st.columns([4, 1])
+    with col_titulo:
+        n_fotos = len(imagenes_analizadas)
+        st.markdown(
+            f"<small style='opacity:0.7;'>Mostrando <strong>{n_fotos}</strong> fotografía(s) — "
+            f"columna izquierda: original | columna derecha: detecciones YOLO</small>",
+            unsafe_allow_html=True
         )
     with col_limpiar:
         if st.button("🧹 Limpiar Inspección", use_container_width=True, type="secondary"):
             st.session_state.imagenes_analizadas = []
             st.session_state.ultimo_cam_bytes = None
+            st.session_state.reporte_actual = None
             st.rerun()
-            
-    # Encontrar la imagen seleccionada
-    img_info = next(img for img in imagenes_analizadas if img["nombre"] == foto_seleccionada)
-    
-    col_orig, col_anotada = st.columns(2)
-    with col_orig:
-        st.markdown(f"**Fotografía Original ({img_info['nombre']})**")
-        st.image(img_info["original"], use_container_width=True)
-    with col_anotada:
-        st.markdown("**Daños detectados (YOLO)**")
-        st.image(img_info["anotada"], use_container_width=True)
+
+    # Mosaico: todas las fotos, original vs anotada
+    for idx, img_info in enumerate(imagenes_analizadas):
+        st.markdown(
+            f"<div style='font-size:0.9rem; font-weight:600; opacity:0.85; margin-top:0.6rem; text-align: left;'>"
+            f"📸 Foto {idx + 1}: <code>{img_info['nombre']}</code></div>",
+            unsafe_allow_html=True
+        )
+        col_space_left, col_orig, col_space_mid, col_anotada, col_space_right = st.columns([1.5, 2, 0.4, 2, 1.5])
+        with col_orig:
+            st.markdown("<div style='text-align: center;'><small>Fotografía Original</small></div>", unsafe_allow_html=True)
+            st.image(img_info["original"], use_container_width=True)
+        with col_anotada:
+            st.markdown("<div style='text-align: center;'><small>Daños detectados (YOLO)</small></div>", unsafe_allow_html=True)
+            st.image(img_info["anotada"], use_container_width=True)
+        if idx < len(imagenes_analizadas) - 1:
+            st.markdown("<hr style='margin:0.8rem 0; opacity:0.15;'>", unsafe_allow_html=True)
 
     st.divider()
 
@@ -815,6 +991,21 @@ def renderizar_resultados(imagenes_analizadas: list, placa: str = "S/N", marca: 
 
     # Reporte LLM consolidado
     st.markdown("### 🤖 Reporte con IA Explicativa (Consolidado)")
+
+    # Comprobar si el reporte en caché sigue siendo válido para los inputs actuales
+    reporte_valido = False
+    if st.session_state.reporte_actual is not None:
+        meta = st.session_state.reporte_actual.get("meta", {})
+        det_hash = hash(str(todas_detecciones))
+        if (meta.get("placa") == placa and
+            meta.get("marca") == marca and
+            meta.get("modelo") == modelo and
+            meta.get("inspector") == inspector and
+            meta.get("detecciones_hash") == det_hash):
+            reporte_valido = True
+        else:
+            st.session_state.reporte_actual = None
+
     generar_btn = st.button(
         "✨ Generar reporte consolidado con Groq",
         type="primary",
@@ -822,46 +1013,17 @@ def renderizar_resultados(imagenes_analizadas: list, placa: str = "S/N", marca: 
         key="btn_reporte",
     )
 
-    if generar_btn and (not placa or not marca or not modelo or not inspector):
-        st.error("⚠️ Todos los campos de los Datos de la Inspección (Placa, Marca, Modelo e Inspector) son obligatorios para generar el reporte.")
-
-    if generar_btn and placa and marca and modelo and inspector:
-        try:
-            with st.spinner("🧠 Analizando todos los daños con Groq AI..."):
-                reporte = generar_reporte(todas_detecciones)
-
-            estado = reporte.get("estado", "Desconocido")
-            justificacion = reporte.get("justificacion", "Sin información.")
-            config = ESTADO_CONFIG.get(estado, ESTADO_CONFIG["Sin daños"])
-
-            st.markdown(
-                f"""
-                <div class="estado-badge" style="
-                    color: {config['color']};
-                    background-color: {config['bg']};
-                    border-color: {config['color']};
-                ">
-                    {config['emoji']} Estado General del Vehículo: <strong>{estado}</strong>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            st.markdown("**Evaluación detallada de la IA:**")
-            st.markdown(
-                f"""
-                <div class="section-card">
-                    <p style="line-height: 1.7; margin: 0; color: var(--text-color); opacity: 0.95;">
-                        {justificacion}
-                    </p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            st.divider()
-            
+    if generar_btn:
+        if not placa or not marca or not modelo or not inspector:
+            st.error("⚠️ Todos los campos de los Datos de la Inspección (Placa, Marca, Modelo e Inspector) son obligatorios para generar el reporte.")
+        else:
             try:
+                with st.spinner("🧠 Analizando todos los daños con Groq AI..."):
+                    reporte = generar_reporte(todas_detecciones)
+
+                estado = reporte.get("estado", "Desconocido")
+                justificacion = reporte.get("justificacion", "Sin información.")
+
                 pdf_bytes = bytes(generar_pdf_reporte(
                     imagenes_analizadas=imagenes_analizadas,
                     todas_detecciones=todas_detecciones,
@@ -872,7 +1034,7 @@ def renderizar_resultados(imagenes_analizadas: list, placa: str = "S/N", marca: 
                     modelo=modelo,
                     inspector=inspector
                 ))
-                
+
                 # Guardar automáticamente en el historial local
                 guardar_en_historial(
                     pdf_bytes=pdf_bytes,
@@ -880,76 +1042,133 @@ def renderizar_resultados(imagenes_analizadas: list, placa: str = "S/N", marca: 
                     marca=marca,
                     modelo=modelo,
                     inspector=inspector,
-                    estado=estado
+                    estado=estado,
+                    justificacion=justificacion
                 )
-                
-                st.download_button(
-                    label="⬇️ Descargar Reporte PDF (Oficial)",
-                    data=pdf_bytes,
-                    file_name="reporte_inspeccion_consolidado.pdf",
-                    mime="application/pdf",
-                    use_container_width=True,
-                )
-            except Exception as pdf_err:
-                st.error(f"❌ No se pudo compilar el PDF: {pdf_err}. Por favor, intente de nuevo.")
 
-        except RuntimeError as e:
-            st.error(str(e))
-        except Exception as e:
-            st.error(f"❌ Error al generar el reporte: {e}")
+                # Guardar en caché del session_state
+                st.session_state.reporte_actual = {
+                    "estado": estado,
+                    "justificacion": justificacion,
+                    "pdf_bytes": pdf_bytes,
+                    "meta": {
+                        "placa": placa,
+                        "marca": marca,
+                        "modelo": modelo,
+                        "inspector": inspector,
+                        "detecciones_hash": hash(str(todas_detecciones))
+                    }
+                }
+                reporte_valido = True
+            except RuntimeError as e:
+                st.error(str(e))
+            except Exception as e:
+                st.error(f"❌ Error al generar el reporte: {e}")
+
+    # Mostrar el reporte si es válido
+    if reporte_valido and st.session_state.reporte_actual is not None:
+        rep_data = st.session_state.reporte_actual
+        estado = rep_data["estado"]
+        justificacion = rep_data["justificacion"]
+        pdf_bytes = rep_data["pdf_bytes"]
+        config = ESTADO_CONFIG.get(estado, ESTADO_CONFIG["Sin daños"])
+
+        st.markdown(
+            f"""
+            <div class="estado-badge" style="
+                color: {config['color']};
+                background-color: {config['bg']};
+                border-color: {config['color']};
+            ">
+                {config['emoji']} Estado General del Vehículo: <strong>{estado}</strong>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown("**Evaluación detallada de la IA:**")
+        st.markdown(
+            f"""
+            <div class="section-card">
+                <p style="line-height: 1.7; margin: 0; color: var(--text-color); opacity: 0.95;">
+                    {justificacion}
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.divider()
+
+        st.download_button(
+            label="⬇️ Descargar Reporte PDF (Oficial)",
+            data=pdf_bytes,
+            file_name="reporte_inspeccion_consolidado.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+            key="download_reporte_pdf"
+        )
 
 
 # ============================================================
 # Lógica principal de visualización
 # ============================================================
-if len(st.session_state.imagenes_analizadas) > 0:
-    st.divider()
-    renderizar_resultados(
-        st.session_state.imagenes_analizadas,
-        placa=placa,
-        marca=marca,
-        modelo=modelo,
-        inspector=inspector
-    )
-
-elif usar_demo_directo:
-    # Demo sin imagen: usar imagen placeholder + detecciones simuladas
-    st.divider()
-    st.info("🧪 Modo demo sin imagen: mostrando detecciones simuladas sobre imagen de ejemplo.")
-    img_demo_info = [{
-        "nombre": "demo_imagen.png",
-        "original": imagen_demo_rgb(),
-        "anotada": imagen_demo_anotada(),
-        "detecciones": DETECCIONES_DEMO
-    }]
-    renderizar_resultados(
-        img_demo_info,
-        placa=placa,
-        marca=marca,
-        modelo=modelo,
-        inspector=inspector
-    )
-
+if st.session_state.get("en_historial", False):
+    # En la pestaña historial, NO mostramos ni resultados ni placeholders de inspección.
+    pass
 else:
-    # Estado inicial — placeholder visual
-    st.markdown("""
-    <div style="
-        text-align: center; padding: 5rem 2rem;
-        background: rgba(128, 128, 128, 0.05);
-        border: 2px dashed rgba(128, 128, 128, 0.2);
-        border-radius: 20px;
-        box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
-        backdrop-filter: blur(8px);
-    ">
-        <div style="font-size: 4.5rem; margin-bottom: 1.2rem; filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.3));">📷</div>
-        <h3 style="font-size: 1.35rem; font-weight: 700; margin: 0; color: var(--text-color);">
-            Sube imágenes del vehículo para comenzar el análisis
-        </h3>
-        <p style="font-size: 0.95rem; opacity: 0.75; margin-top: 0.75rem; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.5;">
-            El sistema de visión artificial detectará automáticamente abolladuras, rayones, faros rotos, parachoques dañados y más en múltiples capturas.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    if len(st.session_state.imagenes_analizadas) > 0:
+        st.markdown("<hr class='results-divider' style='margin: 2rem 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
+        st.markdown('<div class="results-container">', unsafe_allow_html=True)
+        renderizar_resultados(
+            st.session_state.imagenes_analizadas,
+            placa=placa,
+            marca=marca,
+            modelo=modelo,
+            inspector=inspector
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    elif usar_demo_directo:
+        # Demo sin imagen: usar imagen placeholder + detecciones simuladas
+        st.markdown("<hr class='results-divider' style='margin: 2rem 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
+        st.markdown('<div class="results-container">', unsafe_allow_html=True)
+        st.info("🧪 Modo demo sin imagen: mostrando detecciones simuladas sobre imagen de ejemplo.")
+        img_demo_info = [{
+            "nombre": "demo_imagen.png",
+            "original": imagen_demo_rgb(),
+            "anotada": imagen_demo_anotada(),
+            "detecciones": DETECCIONES_DEMO
+        }]
+        renderizar_resultados(
+            img_demo_info,
+            placa=placa,
+            marca=marca,
+            modelo=modelo,
+            inspector=inspector
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    else:
+        # Estado inicial — placeholder visual
+        st.markdown("""
+        <div class="initial-placeholder" style="
+            text-align: center; padding: 5rem 2rem;
+            background: rgba(128, 128, 128, 0.05);
+            border: 2px dashed rgba(128, 128, 128, 0.2);
+            border-radius: 20px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+            backdrop-filter: blur(8px);
+        ">
+            <div style="font-size: 4.5rem; margin-bottom: 1.2rem; filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.3));">📷</div>
+            <h3 style="font-size: 1.35rem; font-weight: 700; margin: 0; color: var(--text-color);">
+                Sube imágenes del vehículo para comenzar el análisis
+            </h3>
+            <p style="font-size: 0.95rem; opacity: 0.75; margin-top: 0.75rem; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+                El sistema de visión artificial detectará automáticamente abolladuras, rayones, faros rotos, parachoques dañados y más en múltiples capturas.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 # ============================================================

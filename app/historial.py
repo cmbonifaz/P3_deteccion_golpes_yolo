@@ -69,7 +69,7 @@ def obtener_historial() -> list:
         print(f"Error al leer historial local: {e}")
         return []
 
-def guardar_en_historial(pdf_bytes: bytes, placa: str, marca: str, modelo: str, inspector: str, estado: str) -> str:
+def guardar_en_historial(pdf_bytes: bytes, placa: str, marca: str, modelo: str, inspector: str, estado: str, justificacion: str = "") -> str:
     """
     Guarda el PDF localmente y en Supabase, y registra la entrada en el historial.
     Retorna el nombre del archivo PDF generado.
@@ -108,6 +108,7 @@ def guardar_en_historial(pdf_bytes: bytes, placa: str, marca: str, modelo: str, 
         "modelo": modelo_limpia,
         "inspector": inspector_limpio,
         "estado": estado,
+        "justificacion": justificacion.strip() if justificacion else "",
         "pdf_nombre": pdf_nombre,
         "pdf_url": None
     }

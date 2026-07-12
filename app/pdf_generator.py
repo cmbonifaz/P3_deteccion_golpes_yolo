@@ -110,27 +110,40 @@ def generar_pdf_reporte(imagenes_analizadas: list, todas_detecciones: list, esta
     pdf.set_fill_color(241, 245, 249)
     pdf.set_draw_color(226, 232, 240)
     pdf.set_text_color(71, 85, 105)
-    pdf.set_font("helvetica", "B", 9)
-    
-    pdf.cell(50, 8, " Foto / Origen", border=1, fill=True)
-    pdf.cell(60, 8, " Tipo de Daño", border=1, fill=True)
-    pdf.cell(40, 8, " Zona Afectada", border=1, fill=True)
-    pdf.cell(40, 8, " Confianza", border=1, fill=True, ln=True)
-    
-    pdf.set_font("helvetica", "", 9)
+    pdf.set_font("helvetica", "B", 8)
+
+    # Anchos: Foto=55, Tipo=65, Zona=45, Conf=25 => total=190
+    pdf.cell(55, 7, " Foto / Origen", border=1, fill=True)
+    pdf.cell(65, 7, " Tipo de Dano", border=1, fill=True)
+    pdf.cell(45, 7, " Zona Afectada", border=1, fill=True)
+    pdf.cell(25, 7, " Conf.", border=1, fill=True, ln=True)
+
+    def _safe(text, max_chars):
+        """Trunca y convierte a ASCII seguro para FPDF Latin-1."""
+        text = str(text)
+        if len(text) > max_chars:
+            text = text[:max_chars - 2] + ".."
+        # Reemplazar caracteres no Latin-1 con equivalentes ASCII
+        return text.encode("latin-1", errors="replace").decode("latin-1")
+
+    pdf.set_font("helvetica", "", 8)
     pdf.set_text_color(51, 65, 85)
-    
+
     if not todas_detecciones:
-        pdf.cell(190, 8, " No se detectaron daños en la carroceria.", border=1, ln=True, align="C")
+        pdf.cell(190, 7, " No se detectaron danos en la carroceria.", border=1, ln=True, align="C")
     else:
         for d in todas_detecciones:
-            pdf.cell(50, 8, f" {d.get('imagen', 'Imagen')}", border=1)
-            pdf.cell(60, 8, f" {d['clase_legible']}", border=1)
-            pdf.cell(40, 8, f" {d['zona']}", border=1)
-            pdf.cell(40, 8, f" {int(d['confianza'] * 100)}%", border=1, ln=True)
-            
-    pdf.ln(10)
-    
+            nombre_origen = _safe(d.get('imagen', 'Imagen'), 18)
+            tipo_dano     = _safe(d['clase_legible'], 26)
+            zona          = _safe(d['zona'], 20)
+            confianza     = f"{int(d['confianza'] * 100)}%"
+            pdf.cell(55, 7, f" {nombre_origen}", border=1)
+            pdf.cell(65, 7, f" {tipo_dano}", border=1)
+            pdf.cell(45, 7, f" {zona}", border=1)
+            pdf.cell(25, 7, f" {confianza}", border=1, ln=True)
+
+    pdf.ln(8)
+
     # 5. IMÁGENES DEL ANÁLISIS
     pdf.add_page()
     pdf.set_font("helvetica", "B", 12)
