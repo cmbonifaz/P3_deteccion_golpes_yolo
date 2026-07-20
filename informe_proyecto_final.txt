@@ -1,0 +1,499 @@
+﻿\documentclass[12pt,a4paper]{article}
+
+% Paquetes
+\usepackage[spanish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{xurl}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{adjustbox}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\geometry{margin=2.54cm}
+\setstretch{1.5}
+
+% Configuración de listings para código
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  backgroundcolor=\color{gray!10},
+  keywordstyle=\color{blue},
+  commentstyle=\color{green!50!black},
+  stringstyle=\color{red!70!black},
+  showstringspaces=false
+}
+
+% Encabezado y pie de página
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Aplicaciones Basadas en el Conocimiento}
+\lhead{ESPE}
+\rfoot{\thepage}
+
+% Inicio del documento
+\begin{document}
+
+% =========================
+% PORTADA
+% =========================
+\begin{center}
+
+% Logos (reemplazar con rutas reales)
+\includegraphics[width=5cm]{Imagen1.png} \hfill
+\includegraphics[width=1.75cm]{Imagen2.png}
+
+\vspace{1cm}
+
+{\large \textbf{INGENIERÍA EN SOFTWARE}}\\[1cm]
+
+{\large \textbf{APLICACIONES BASADAS EN EL CONOCIMIENTO}}\\[2cm]
+
+{\Large \textbf{INFORME DE PROYECTO FINAL}}\\[1cm]
+
+{\large \textbf{Título del Proyecto:}}\\
+Sistema Inteligente de Detección de Daños en Vehículos mediante YOLOv8 y Groq AI\\[2cm]
+
+\textbf{Nombre del estudiante:} Christian Bonifaz\\
+\textbf{Nivel:} 5to\\[1cm]
+
+% TODO: Reemplazar con el nombre real del docente
+\textbf{Docente:} Ing. [Nombre del Docente]\\
+\textbf{Fecha:} \today
+
+\end{center}
+
+\newpage
+\tableofcontents
+\newpage
+
+% =========================
+% RESUMEN (ABSTRACT)
+% =========================
+\section*{Resumen}
+\addcontentsline{toc}{section}{Resumen}
+
+El presente proyecto aborda el problema de la inspección manual de daños en vehículos, un proceso lento, subjetivo y propenso a errores humanos en el sector asegurador y de peritaje automotriz. Se desarrolló un sistema inteligente basado en visión por computadora que emplea el modelo YOLOv8, entrenado con aproximadamente 13\,000 imágenes fusionadas de múltiples datasets públicos, para detectar automáticamente 14 tipos de daños en la carrocería vehicular, incluyendo abolladuras, rayones, grietas, faros rotos y daños en parachoques, entre otros. El sistema implementa un pipeline de doble validación: primero verifica la presencia de un vehículo mediante un filtro COCO (YOLOv8n), y posteriormente ejecuta la inferencia especializada de detección de daños. Los datos estructurados resultantes son enviados a Groq AI (Llama 3.3 70B), que actúa como capa de inteligencia artificial explicativa para generar diagnósticos técnicos en lenguaje natural. La aplicación, construida con Streamlit, soporta la carga de múltiples imágenes, captura por cámara web y procesamiento de video con muestreo a 1 frame por segundo. Los reportes generados se almacenan de forma híbrida en Supabase (PostgreSQL y Storage) con respaldo local automático, y se exportan como documentos PDF profesionales. El modelo alcanzó un mAP50 de 0.725, una precisión promedio de 0.768 y un recall de 0.710.
+
+\newpage
+
+% =========================
+% 1. INTRODUCCIÓN
+% =========================
+\section{Introducción}
+
+\subsection{Contexto del Problema}
+
+En la industria automotriz y aseguradora, la evaluación de daños en vehículos es un proceso fundamental que tradicionalmente depende de inspecciones visuales realizadas por peritos humanos. Este enfoque manual presenta múltiples desafíos: requiere personal especializado con experiencia, consume tiempo considerable por cada inspección, y está sujeto a inconsistencias derivadas de la subjetividad del evaluador (Jocher et al., 2023). Un mismo vehículo puede recibir diagnósticos distintos dependiendo del perito asignado, lo cual genera conflictos entre aseguradoras y clientes.
+
+Con el avance de las técnicas de visión por computadora y los modelos de detección de objetos en tiempo real, surge la oportunidad de automatizar este proceso. Los modelos de la familia YOLO (You Only Look Once) han demostrado ser altamente eficientes para la detección de objetos en imágenes, procesando fotogramas completos en una sola pasada de la red neuronal convolucional, lo que los hace idóneos para aplicaciones que requieren velocidad y precisión simultáneamente (Redmon et al., 2016).
+
+\subsection{Justificación}
+
+La automatización del proceso de inspección vehicular mediante visión por computadora e inteligencia artificial explicativa ofrece ventajas significativas frente al método manual tradicional:
+
+\begin{itemize}
+    \item \textbf{Consistencia:} El modelo de detección aplica los mismos criterios en cada evaluación, eliminando la variabilidad subjetiva entre inspectores humanos.
+    \item \textbf{Velocidad:} El sistema procesa cada imagen en un rango de 0.5 a 1.2 segundos en entornos de CPU estándar, permitiendo evaluar múltiples fotografías de un vehículo en segundos.
+    \item \textbf{Transparencia:} La capa de IA explicativa genera justificaciones comprensibles en lenguaje natural, incrementando la confianza del usuario final en el diagnóstico emitido.
+    \item \textbf{Trazabilidad:} Cada inspección queda registrada en una base de datos en la nube con evidencia fotográfica y el reporte asociado, facilitando auditorías posteriores.
+\end{itemize}
+
+\subsection{Objetivos}
+
+\subsubsection{Objetivo General}
+Desarrollar una aplicación web inteligente para la detección automática de daños en vehículos mediante visión por computadora (YOLOv8) e inteligencia artificial explicativa (Groq AI), capaz de generar reportes técnicos profesionales y mantener un historial persistente de inspecciones.
+
+\subsubsection{Objetivos Específicos}
+\begin{enumerate}
+    \item Entrenar un modelo YOLOv8 especializado en la detección de 14 clases de daños vehiculares utilizando datasets públicos fusionados y técnicas de data augmentation.
+    \item Implementar un pipeline de doble validación que filtre imágenes no vehiculares antes de la inferencia especializada.
+    \item Integrar un modelo de lenguaje grande (Llama 3.3 70B vía Groq) como capa de IA explicativa que interprete los datos numéricos y categóricos extraídos por YOLO y genere diagnósticos en lenguaje natural.
+    \item Diseñar e implementar un sistema de persistencia híbrida (Supabase PostgreSQL + Storage con fallback local) para el almacenamiento de reportes e historial de inspecciones.
+    \item Desarrollar una interfaz de usuario profesional en Streamlit que soporte múltiples fuentes de entrada (imágenes, cámara web y video) y permita la exportación de reportes en formato PDF.
+\end{enumerate}
+
+% =========================
+% 2. MARCO TEÓRICO
+% =========================
+\section{Marco Teórico y Tecnologías}
+
+\subsection{Visión por Computadora: YOLOv8}
+
+YOLO (You Only Look Once) es una familia de modelos de detección de objetos en tiempo real que procesa la imagen completa en una sola evaluación de la red neuronal, a diferencia de enfoques basados en regiones como Faster R-CNN que requieren múltiples pasadas (Redmon et al., 2016). YOLOv8, desarrollado por Ultralytics, representa la octava iteración de esta arquitectura e introduce mejoras significativas en precisión y velocidad mediante una estructura \textit{anchor-free} y un esquema de asignación de tareas desacoplado (Jocher et al., 2023).
+
+En este proyecto se utilizan dos variantes de YOLOv8:
+\begin{itemize}
+    \item \textbf{YOLOv8n (Nano):} Modelo preentrenado en el dataset COCO de 80 clases, empleado como filtro de validación para confirmar la presencia de vehículos en la imagen (clases: \texttt{car}, \texttt{bus}, \texttt{truck}).
+    \item \textbf{YOLOv8s (Small):} Modelo reentrenado con un dataset especializado de aproximadamente 13\,000 imágenes para detectar 14 clases específicas de daños vehiculares.
+\end{itemize}
+
+\subsection{IA Explicativa: Groq AI (Llama 3.3 70B)}
+
+La inteligencia artificial explicativa (XAI) busca hacer transparentes y comprensibles las decisiones de los sistemas de IA para los usuarios finales (Arrieta et al., 2020). En este proyecto, el componente explicativo se implementa mediante el modelo de lenguaje grande Llama 3.3 70B, accedido a través de la plataforma Groq, que ofrece inferencia de ultra baja latencia mediante sus chips LPU (Language Processing Unit).
+
+El sistema envía al LLM un JSON estructurado con los datos de cada detección (tipo de daño, nivel de confianza y zona de la carrocería), y mediante un prompt cuidadosamente diseñado con restricciones anti-alucinación, el modelo genera un diagnóstico técnico que clasifica el estado del vehículo en cuatro categorías: ``Sin daños'', ``Leve'', ``Moderado'' o ``Grave'', acompañado de una justificación detallada de entre 100 y 250 palabras.
+
+\subsection{Tecnologías Utilizadas}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|l|l|p{7cm}|}
+\hline
+\textbf{Componente} & \textbf{Tecnología} & \textbf{Descripción} \\
+\hline
+Lenguaje & Python 3.10+ & Lenguaje principal del proyecto \\
+\hline
+Detección de objetos & Ultralytics YOLOv8 & Inferencia y entrenamiento del modelo de visión \\
+\hline
+Procesamiento de imagen & OpenCV & Lectura, redimensionamiento y preprocesamiento \\
+\hline
+IA Explicativa & Groq (Llama 3.3 70B) & Generación de diagnósticos en lenguaje natural \\
+\hline
+Frontend & Streamlit & Interfaz web interactiva \\
+\hline
+Base de datos & Supabase (PostgreSQL) & Persistencia de metadatos en la nube \\
+\hline
+Almacenamiento & Supabase Storage & Almacenamiento de archivos PDF en la nube \\
+\hline
+Generación PDF & ReportLab & Creación dinámica de reportes PDF profesionales \\
+\hline
+\end{tabular}
+\caption{Stack tecnológico del sistema}
+\end{table}
+
+% =========================
+% 3. DISEÑO Y METODOLOGÍA
+% =========================
+\section{Diseño y Metodología del Sistema}
+
+\subsection{Arquitectura del Sistema}
+
+El sistema implementa un pipeline secuencial de doble validación compuesto por seis etapas principales:
+
+\begin{enumerate}
+    \item \textbf{Entrada multimedia:} El usuario carga imágenes (hasta 10 por sesión), captura fotografías con la cámara web o sube un archivo de video.
+    \item \textbf{Filtro de validación COCO:} Cada imagen o frame es analizado por YOLOv8n para confirmar que contiene un vehículo. Las imágenes que no pasan esta validación son descartadas con una alerta.
+    \item \textbf{Detección de daños:} Las imágenes validadas son procesadas por el modelo especializado (best.pt) que identifica y localiza los 14 tipos de daños.
+    \item \textbf{Consolidación:} Todas las detecciones de todas las imágenes se unifican en un estado global de sesión.
+    \item \textbf{Diagnóstico con IA:} El JSON consolidado se envía a Groq (Llama 3.3 70B) para obtener el estado general y la justificación técnica.
+    \item \textbf{Persistencia y entrega:} El reporte se guarda en Supabase y se genera un PDF descargable.
+\end{enumerate}
+
+% TODO: Insertar aquí el diagrama de flujo del sistema
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.85\textwidth]{flujo_app_deteccion_danos_v3.png}
+%     \caption{Diagrama de flujo del pipeline de detección de daños vehiculares}
+%     \label{fig:flujo}
+% \end{figure}
+
+\subsection{El Conjunto de Datos (Dataset)}
+
+El dataset de entrenamiento fue construido mediante la fusión de tres datasets públicos obtenidos de Roboflow Universe:
+
+\begin{itemize}
+    \item \textbf{Automobile Damage Detection Dataset:} Dataset base con aproximadamente 6\,900 imágenes anotadas en 14 categorías de daño.
+    \item \textbf{Car Damage Detection (CAPSTONE):} Dataset complementario de 3\,226 imágenes centrado en parachoques, puertas, guardafangos y parabrisas.
+    \item \textbf{Car Damage Detection (Oleksy1121):} Dataset adicional de 456 imágenes base (1\,140 con augmentation) necesario para cubrir la clase de rayones.
+\end{itemize}
+
+La fusión se realizó mediante el script \texttt{merge\_datasets.py}, que unifica los identificadores de clase entre los tres datasets y genera un archivo \texttt{data.yaml} compatible con Ultralytics. Se aplicaron técnicas de data augmentation (rotación, variación de brillo/contraste y recortes) sobre las clases minoritarias para balancear la distribución. El dataset final contiene aproximadamente 13\,000 imágenes distribuidas en conjuntos de entrenamiento, validación y prueba.
+
+Las 14 clases de daño resultantes son:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{|c|l|l||c|l|l|}
+\hline
+\textbf{ID} & \textbf{Clase} & \textbf{Traducción} & \textbf{ID} & \textbf{Clase} & \textbf{Traducción} \\
+\hline
+0 & scratch & Rayón & 7 & bumper\_damage & Parachoques \\
+1 & dent & Abolladura & 8 & door\_damage & Puerta \\
+2 & crack & Grieta & 9 & fender\_damage & Guardafango \\
+3 & glass\_crack & Parabrisas roto & 10 & hood\_damage & Cofre \\
+4 & headlight\_damage & Faro delantero & 11 & trunk\_damage & Cajuela \\
+5 & taillight\_damage & Luz trasera & 12 & roof\_damage & Techo \\
+6 & mirror\_damage & Espejo lateral & 13 & rust & Óxido \\
+\hline
+\end{tabular}
+\caption{Clases de daño detectadas por el modelo}
+\end{table}
+
+\subsection{Diseño del Historial (Base de Datos)}
+
+El sistema utiliza Supabase como motor de base de datos en la nube (PostgreSQL), con un esquema de persistencia híbrida que incluye respaldo local automático. La tabla principal \texttt{reportes} almacena los siguientes campos:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{|l|l|p{6.5cm}|}
+\hline
+\textbf{Campo} & \textbf{Tipo} & \textbf{Descripción} \\
+\hline
+id & TEXT (PK) & Identificador único (timestamp + placa) \\
+\hline
+timestamp & BIGINT & Marca temporal Unix \\
+\hline
+fecha\_hora & TEXT & Fecha y hora legible (DD/MM/YYYY HH:MM:SS) \\
+\hline
+placa & VARCHAR(20) & Matrícula del vehículo inspeccionado \\
+\hline
+marca & VARCHAR(100) & Marca del vehículo \\
+\hline
+modelo & VARCHAR(100) & Modelo del vehículo \\
+\hline
+inspector & VARCHAR(100) & Nombre del inspector responsable \\
+\hline
+estado & VARCHAR(20) & Diagnóstico: Leve, Moderado, Grave o Sin daños \\
+\hline
+justificacion & TEXT & Texto explicativo generado por Groq AI \\
+\hline
+pdf\_nombre & TEXT & Nombre del archivo PDF generado \\
+\hline
+pdf\_url & TEXT & URL pública del PDF en Supabase Storage \\
+\hline
+\end{tabular}
+\caption{Estructura de la tabla \texttt{reportes} en Supabase}
+\end{table}
+
+% =========================
+% 4. IMPLEMENTACIÓN
+% =========================
+\section{Implementación y Desarrollo}
+
+\subsection{Módulo de Visión por Computadora (\texttt{inference.py})}
+
+El módulo de inferencia implementa el pipeline de doble validación mediante dos funciones principales:
+
+\textbf{1. Validación de vehículo (\texttt{validar\_vehiculo}):} Ejecuta YOLOv8n preentrenado en COCO con un umbral de confianza de 0.15 para detectar las clases \texttt{car} (ID 2), \texttt{bus} (ID 5) y \texttt{truck} (ID 7). El umbral bajo permite tolerar encuadres cerrados y primeros planos parciales del vehículo.
+
+\textbf{2. Detección de daños (\texttt{detectar\_danos}):} Si la validación es exitosa, ejecuta el modelo especializado \texttt{best.pt} con un umbral configurable (por defecto 0.4). Para cada detección, extrae: la clase del daño, el nivel de confianza, las coordenadas del bounding box y calcula la zona aproximada de la carrocería (frontal, lateral izquierda/derecha, trasera o centro) mediante la función \texttt{obtener\_zona()} que divide la imagen en regiones según las coordenadas del centro de cada caja delimitadora.
+
+El procesamiento de video se realiza mediante OpenCV, extrayendo frames a razón de 1 por segundo para optimizar el uso de recursos computacionales. Cada frame extraído se identifica con una marca temporal (por ejemplo: \texttt{video.mp4 (Seg. 3.0)}).
+
+% TODO: Insertar captura de pantalla del mosaico de resultados (imagen original vs. anotada)
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.9\textwidth]{captura_mosaico.png}
+%     \caption{Vista de mosaico: imagen original (izquierda) vs. detecciones YOLO (derecha)}
+%     \label{fig:mosaico}
+% \end{figure}
+
+\subsection{Módulo de Registro y Almacenamiento (\texttt{historial.py})}
+
+El módulo de persistencia implementa un patrón de almacenamiento híbrido con la siguiente estrategia:
+
+\begin{enumerate}
+    \item \textbf{Intento primario (Supabase):} Sube el archivo PDF al bucket \texttt{reportes-inspeccion} de Supabase Storage, obtiene la URL pública del archivo y registra los metadatos de la inspección en la tabla PostgreSQL \texttt{reportes}.
+    \item \textbf{Fallback local:} Independientemente del resultado de la operación en la nube, el sistema siempre guarda una copia local del PDF en \texttt{data/reportes/} y actualiza el índice JSON local \texttt{historial.json}.
+    \item \textbf{Consulta de historial:} Al recuperar reportes, el sistema intenta primero consultar Supabase y, si falla, recurre al archivo JSON local.
+\end{enumerate}
+
+La interfaz de historial permite al usuario filtrar reportes por placa, estado del vehículo, nombre del inspector y rango de fechas. Cada registro almacenado incluye el diagnóstico completo generado por la IA explicativa (\texttt{justificacion}), permitiendo su consulta posterior sin necesidad de regenerar el reporte.
+
+\subsection{Módulo de IA Explicativa (\texttt{llm\_report.py})}
+
+La integración con Groq AI se realiza mediante la biblioteca oficial \texttt{groq} para Python. El prompt interno del sistema fue diseñado con restricciones estrictas anti-alucinación para garantizar que el LLM base su análisis exclusivamente en los datos provistos por YOLO:
+
+\begin{lstlisting}[caption={Extracto del prompt interno del sistema},language=Python]
+prompt = """
+Eres un asistente experto en inspeccion y peritaje vehicular.
+Recibiras una lista de danos detectados por un modelo YOLO.
+
+1. Determinar el estado general del vehiculo usando EXACTAMENTE
+   una de estas categorias:
+   - "Sin danos", "Leve", "Moderado", "Grave"
+
+2. Redactar una justificacion explicativa (100-250 palabras)
+
+REGLAS ESTRICTAS:
+- Basa tu analisis UNICAMENTE en los danos de la lista.
+- No inventes marcas, modelos ni valores monetarios.
+- Responde en formato JSON valido con las llaves
+  "estado" y "justificacion".
+
+Danos detectados (JSON):
+{detecciones}
+"""
+\end{lstlisting}
+
+El sistema implementa un mecanismo de reintentos (hasta 3 intentos) con espera exponencial para manejar errores de red o límites de tasa de la API. Las respuestas se parsean con múltiples niveles de fallback: primero intenta parsear JSON directo, luego busca patrones JSON embebidos en texto, y finalmente infiere el estado desde palabras clave en el texto libre.
+
+% =========================
+% 5. RESULTADOS Y PRUEBAS
+% =========================
+\section{Resultados y Pruebas}
+
+\subsection{Rendimiento del Modelo de Visión}
+
+El modelo YOLOv8s fue entrenado durante 100 épocas en Google Colab con GPU T4, utilizando el dataset fusionado de aproximadamente 13\,000 imágenes. Las métricas obtenidas en el conjunto de validación son:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Métrica} & \textbf{Valor Obtenido} \\
+\hline
+mAP50 (Mean Average Precision al 50\% IoU) & 0.725 \\
+\hline
+Precisión promedio & 0.768 \\
+\hline
+Recall promedio & 0.710 \\
+\hline
+Modelo base utilizado & YOLOv8s \\
+\hline
+Épocas de entrenamiento & 100 \\
+\hline
+Tamaño de imagen & 640 $\times$ 640 px \\
+\hline
+\end{tabular}
+\caption{Métricas de rendimiento del modelo entrenado}
+\end{table}
+
+% TODO: Insertar aquí las curvas de entrenamiento (loss, mAP por época)
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.8\textwidth]{curvas_entrenamiento.png}
+%     \caption{Curvas de pérdida y mAP durante el entrenamiento (100 épocas)}
+%     \label{fig:curvas}
+% \end{figure}
+
+% TODO: Insertar la matriz de confusión del modelo
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.7\textwidth]{matriz_confusion.png}
+%     \caption{Matriz de confusión del modelo en el conjunto de validación}
+%     \label{fig:confusion}
+% \end{figure}
+
+\subsection{Casos de Uso (Demostración Visual)}
+
+A continuación se presentan capturas de pantalla que demuestran el funcionamiento end-to-end del sistema:
+
+% TODO: Insertar captura de la interfaz principal con los campos de datos
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.9\textwidth]{captura_interfaz_principal.png}
+%     \caption{Interfaz principal: campos obligatorios de inspección y carga multimedia}
+%     \label{fig:interfaz}
+% \end{figure}
+
+% TODO: Insertar captura del mosaico de resultados con imagen original y anotada
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.9\textwidth]{captura_deteccion_resultados.png}
+%     \caption{Resultado visual: imagen original (izquierda) vs. detecciones YOLO (derecha)}
+%     \label{fig:deteccion}
+% \end{figure}
+
+% TODO: Insertar captura del reporte generado por la IA explicativa
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.9\textwidth]{captura_reporte_ia.png}
+%     \caption{Diagnóstico generado por Groq AI: estado general y justificación técnica}
+%     \label{fig:reporte_ia}
+% \end{figure}
+
+% TODO: Insertar captura del historial de reportes guardados
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.9\textwidth]{captura_historial.png}
+%     \caption{Historial de reportes guardados con filtros de búsqueda activos}
+%     \label{fig:historial}
+% \end{figure}
+
+% TODO: Insertar captura del PDF exportado
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.7\textwidth]{captura_pdf_exportado.png}
+%     \caption{Ejemplo de reporte PDF oficial exportado por el sistema}
+%     \label{fig:pdf}
+% \end{figure}
+
+\subsection{Análisis de Errores y Limitaciones}
+
+Durante las pruebas del sistema se identificaron las siguientes limitaciones:
+
+\begin{itemize}
+    \item \textbf{Iluminación deficiente:} Fotografías tomadas en condiciones de baja iluminación, con reflejos excesivos o sombras pronunciadas reducen significativamente la capacidad del modelo para detectar daños superficiales como rayones y grietas menores.
+    \item \textbf{Visión bidimensional:} El LLM no tiene acceso directo a las imágenes; razona exclusivamente sobre los datos estructurados que le provee YOLOv8. Esto implica que no puede detectar patrones visuales que el modelo de visión haya omitido.
+    \item \textbf{Rendimiento en CPU:} En entornos sin GPU dedicada, el tiempo de análisis oscila entre 0.5 y 1.2 segundos por imagen, lo cual puede acumularse al procesar múltiples frames de video.
+    \item \textbf{Clases desbalanceadas:} A pesar de las técnicas de augmentation aplicadas, algunas clases como \texttt{rust} (óxido) y \texttt{roof\_damage} (daño en techo) presentan menor representación en el dataset, lo que puede resultar en tasas de recall inferiores para estos tipos de daño específicos.
+    \item \textbf{Dependencia de conectividad:} La generación de reportes con IA explicativa requiere conexión a internet para acceder a la API de Groq. Sin embargo, el sistema de persistencia local garantiza que los datos no se pierdan ante fallos de red.
+\end{itemize}
+
+% =========================
+% 6. CONCLUSIONES
+% =========================
+\section{Conclusiones y Trabajos Futuros}
+
+\subsection{Conclusiones}
+
+\begin{itemize}
+    \item Se cumplió el objetivo general de desarrollar una aplicación web funcional que integra visión por computadora e inteligencia artificial explicativa para la detección automática de daños vehiculares, demostrando que la combinación de YOLOv8 con un LLM como Llama 3.3 produce diagnósticos técnicos coherentes y confiables.
+    \item El pipeline de doble validación (filtro COCO + modelo especializado) demostró ser efectivo para prevenir falsos positivos al rechazar imágenes que no contienen vehículos, mejorando la robustez del sistema frente a entradas no esperadas.
+    \item La arquitectura de persistencia híbrida (Supabase + JSON local) garantiza la disponibilidad de los datos independientemente del estado de la conexión a internet, lo cual es crítico para aplicaciones desplegadas en entornos de campo.
+    \item El modelo entrenado alcanzó métricas competitivas (mAP50: 0.725, Precisión: 0.768, Recall: 0.710) considerando la diversidad y complejidad de las 14 clases de daño, validando la efectividad del enfoque de fusión de datasets complementarios.
+    \item La capa de IA explicativa aporta un valor diferencial significativo al sistema, ya que transforma datos numéricos y categóricos en reportes comprensibles para usuarios no técnicos, incrementando la transparencia y aceptación del diagnóstico automatizado.
+\end{itemize}
+
+\subsection{Trabajos Futuros}
+
+\begin{itemize}
+    \item \textbf{Despliegue en la nube:} Migrar la aplicación a un servicio de hosting como AWS, Google Cloud o Railway para permitir el acceso remoto y multiusuario simultáneo.
+    \item \textbf{Análisis de video en tiempo real:} Implementar procesamiento de streaming de video en vivo mediante WebRTC para inspecciones en tiempo real desde dispositivos móviles.
+    \item \textbf{Estimación de costos de reparación:} Integrar una base de datos de precios de repuestos y mano de obra para que el LLM pueda generar estimaciones de costos asociadas a cada tipo de daño detectado.
+    \item \textbf{Mejora del modelo:} Ampliar el dataset con imágenes de mayor diversidad geográfica y condiciones climáticas, e investigar arquitecturas más recientes como YOLOv9 o RT-DETR para mejorar las métricas en clases minoritarias.
+    \item \textbf{Aplicación móvil nativa:} Desarrollar una versión en Flutter o React Native que aproveche las capacidades de la cámara del dispositivo de forma nativa y permita operación offline con sincronización posterior.
+\end{itemize}
+
+% =========================
+% 7. REFERENCIAS
+% =========================
+\section{Referencias Bibliográficas}
+
+Arrieta, A. B., Díaz-Rodríguez, N., Del Ser, J., Bennetot, A., Tabik, S., Barbado, A., García, S., Gil-López, S., Molina, D., Benjamins, R., Chatila, R., \& Herrera, F. (2020). Explainable Artificial Intelligence (XAI): Concepts, taxonomies, opportunities and challenges toward responsible AI. \textit{Information Fusion}, 58, 82--115. \url{https://doi.org/10.1016/j.inffus.2019.12.012}
+
+Jocher, G., Chaurasia, A., \& Qiu, J. (2023). Ultralytics YOLOv8 [Software]. Ultralytics. \url{https://github.com/ultralytics/ultralytics}
+
+Meta AI. (2024). \textit{Llama 3.3 Model Card}. \url{https://ai.meta.com/blog/llama-3-3/}
+
+Groq, Inc. (2024). \textit{Groq API Documentation}. \url{https://console.groq.com/docs}
+
+Redmon, J., Divvala, S., Girshick, R., \& Farhadi, A. (2016). You Only Look Once: Unified, Real-Time Object Detection. \textit{Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}, 779--788. \url{https://doi.org/10.1109/CVPR.2016.91}
+
+Streamlit, Inc. (2024). \textit{Streamlit Documentation}. \url{https://docs.streamlit.io/}
+
+Supabase, Inc. (2024). \textit{Supabase Documentation: Database and Storage}. \url{https://supabase.com/docs}
+
+Roboflow. (2024). \textit{Roboflow Universe: Computer Vision Datasets}. \url{https://universe.roboflow.com/}
+
+ReportLab Europe Ltd. (2024). \textit{ReportLab User Guide}. \url{https://www.reportlab.com/docs/reportlab-userguide.pdf}
+
+OpenCV Team. (2024). \textit{OpenCV: Open Source Computer Vision Library}. \url{https://opencv.org/}
+
+% =========================
+% 8. ANEXOS
+% =========================
+\section{Anexos}
+
+\begin{itemize}
+    \item \textbf{Repositorio de código:} \url{https://github.com/cmbonifaz/P3_deteccion_golpes_yolo}
+    % TODO: Agregar enlace al video de demostración si existe
+    % \item \textbf{Video de demostración:} \url{https://...}
+\end{itemize}
+
+\end{document}

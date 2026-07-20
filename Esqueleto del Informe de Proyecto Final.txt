@@ -1,0 +1,46 @@
+﻿Esqueleto del Informe de Proyecto Final
+Portada
+* Título del Proyecto (Ej: Sistema de Detección y Explicación de Anomalías en Cajas de Embalaje mediante Visión por Computadora)
+* Nombres de los integrantes.
+* Nombre de la asignatura y fecha.
+Resumen (Abstract)
+* Un párrafo (aprox. 200-250 palabras) que resuma: el problema a resolver, la metodología/modelos de IA utilizados, la arquitectura general de la aplicación y el resultado principal o precisión obtenida.
+1. Introducción
+* 1.1 Contexto del Problema: ¿Cuál es el problema real que están resolviendo? (Ej: En la industria agrícola, la detección temprana de hojas dañadas previene la pérdida de cosechas).
+* 1.2 Justificación: ¿Por qué automatizar esto con Visión por Computadora e IA explicativa es mejor que el método manual tradicional?
+* 1.3 Objetivos:
+   * Objetivo General: (Ej: Desarrollar una aplicación web para el conteo de frutas e interpretación de resultados usando IA).
+   * Objetivos Específicos: (1. Entrenar/implementar un modelo de visión. 2. Diseñar la base de datos para el historial. 3. Integrar un modelo explicativo para interpretar los datos).
+2. Marco Teórico y Tecnologías
+Esta sección debe ser concisa y enfocada solo en lo que el grupo realmente usó.
+* 2.1 Visión por Computadora: Breve explicación del modelo utilizado para la detección/clasificación (Ej: YOLOv8, ResNet, Vision Transformers, OpenCV).
+* 2.2 IA Explicativa (XAI / LLM): Cómo funciona el modelo que toma los datos numéricos/categóricos extraídos de la imagen y genera la explicación en lenguaje natural.
+* 2.3 Tecnologías utilizadas: Lenguajes, frameworks de backend/frontend, y motor de base de datos.
+3. Diseño y Metodología del Sistema
+Aquí los estudiantes deben demostrar cómo unieron las piezas.
+* 3.1 Arquitectura del Sistema: Un diagrama de bloques explicando el flujo de la información:
+   * Usuario sube imagen $\rightarrow$ Modelo CV extrae características (ej. "3 frutas detectadas") $\rightarrow$ Se guarda en BDD $\rightarrow$ LLM genera análisis $\rightarrow$ Se muestra al usuario.
+* 3.2 El Conjunto de Datos (Dataset): ¿De dónde sacaron las imágenes para entrenar o validar su modelo de visión? ¿Cuántas imágenes usaron? ¿Aplicaron Data Augmentation?
+* 3.3 Diseño del Historial (Base de Datos): Estructura básica de la tabla donde registran los eventos (Ej: ID, Fecha, Imagen_URL, Resultado_CV, Explicacion_IA).
+4. Implementación y Desarrollo
+* 4.1 Módulo de Visión por Computadora: Detalles técnicos de cómo la aplicación lee la imagen y la procesa. ¿Qué métricas o datos brutos extrae el modelo? (Ej: Porcentaje de daño en el auto chocado, bounding boxes, cantidad de objetos).
+* 4.2 Módulo de Registro y Almacenamiento: Cómo se captura el output del modelo de visión y se inserta en el historial.
+* 4.3 Módulo de IA Explicativa: ¿Cómo se construyó el prompt o la lógica para que la IA explique los datos?
+   * (Nota para el estudiante: Mostrar un ejemplo del prompt interno. Ej: "Actúa como un perito de seguros. Basado en estos datos: 'Daño frontal: 85%', genera una explicación para el cliente...")
+5. Resultados y Pruebas
+Esta es la sección más importante para evaluar el éxito del proyecto.
+* 5.1 Rendimiento del Modelo de Visión: Métricas básicas si entrenaron el modelo (Precisión, Recall, F1-Score) o ejemplos de falsos positivos/falsos negativos si usaron un modelo pre-entrenado.
+* 5.2 Casos de Uso (Demostración Visual): Capturas de pantalla de la aplicación funcionando. Deben mostrar:
+   1. La imagen original subida.
+   2. El resultado visual de la detección (cajas delimitadoras, máscaras, etc.).
+   3. El registro en la tabla del historial.
+   4. El texto generado por la IA explicativa.
+* 5.3 Análisis de Errores / Limitaciones: ¿En qué condiciones falla el sistema? (Ej: La detección de autos chocados falla si la foto es de noche o tiene mucho reflejo).
+6. Conclusiones y Trabajos Futuros
+* 6.1 Conclusiones: ¿Se cumplieron los objetivos? ¿Qué valor aporta la combinación de CV + IA Explicativa a este problema específico?
+* 6.2 Trabajos Futuros: ¿Qué le agregarían a la aplicación si tuvieran 6 meses más? (Ej: Despliegue en la nube, app móvil, análisis de video en tiempo real, etc.).
+7. Referencias Bibliográficas
+* Artículos académicos, repositorios, documentación oficial (TensorFlow, PyTorch, OpenAI, etc.) en formato APA o IEEE.
+8. Anexos
+* Enlace al repositorio de código (GitHub/GitLab) - Obligatorio.
+* (Opcional) Enlace a un video de demostración de 2-3 minutos.

@@ -25,6 +25,9 @@ El sistema opera bajo un pipeline secuencial de doble validación para garantiza
 [ Diagnóstico con IA ] ➔ Enviar anomalías a Groq (Llama 3.3 70B)
     │
     ▼
+[ Guardado de Reporte ] ➔ Persistir en Supabase (PostgreSQL + Storage) / Local
+    │
+    ▼
 [ Entregables ] ➔ 📄 Reporte de Texto (.txt) | ⬇️ Reporte Técnico (.pdf)
 ```
 
@@ -33,11 +36,16 @@ El sistema opera bajo un pipeline secuencial de doble validación para garantiza
 ## ✨ Características Principales
 
 *   **🔍 Filtro Antiespam de Entrada (Auto-Close-up):** Valida cada imagen de forma individual usando el modelo YOLOv8n (COCO) con un umbral de confianza mínimo de `0.15` para permitir primeros planos y tomas de detalle, bloqueando fotos de elementos ajenos (ej. mascotas, comida).
-*   **📁 Inspección de Múltiples Imágenes (Estilo Aseguradora):** Permite subir hasta 10 fotos en una sola sesión (vistas frontal, trasera, laterales, acercamientos). El sistema acumula todos los daños identificados en un solo informe.
-*   **🎥 Procesamiento de Video:** Admite subir archivos de video (`.mp4`, `.mov`, etc.). Realiza un **muestreo inteligente de 1 frame por segundo** utilizando OpenCV para ahorrar procesamiento, y añade las marcas de tiempo correspondientes a la galería (ej: `video.mp4 (Seg. 3)`).
+*   **📐 Reglas de Encuadre Específicas:** Muestra directrices detalladas en la UI para la toma fotográfica (Vista Frontal: $\ge$ 70% del panel visible; Vistas Laterales: $\ge$ 60%; Vista Trasera: $\ge$ 70%).
+*   **📁 Inspección de Múltiples Imágenes (Estilo Aseguradora):** Permite subir hasta 10 fotos en una sola sesión (vistas frontal, trasera, laterales, acercamientos). El sistema acumula todos los daños identificados en un solo informe en un diseño de mosaico centrado.
+*   **🎥 Procesamiento de Video:** Admite subir archivos de video (`.mp4`, `.mov`, etc.). Realiza un **muestreo inteligente de 1 frame por segundo** utilizando OpenCV para ahorrar procesamiento, y añade las marcas de tiempo correspondientes a la galería (ej: `video.mp4 (Seg. 3.0)`).
 *   **📷 Capturas desde Celular y Web:** Soporte nativo para tomar fotografías secuenciales con la webcam. En dispositivos móviles, el cargador de video permite abrir la cámara del celular y grabar en el acto.
-*   **🤖 IA Explicativa Consolidada:** Utiliza Llama-3.3-70b a través de Groq para formular diagnósticos completos que explican la gravedad del estado general del vehículo y sugieren reparaciones.
-*   **📄 Exportación Profesional:** Generación dinámica de reportes en PDF que incluyen la tabla de daños (indicando el origen/archivo de cada uno) y un registro fotográfico comparativo (Original vs. YOLO).
+*   **🤖 IA Explicativa Consolidada (Groq):** Utiliza Llama-3.3-70b a través de Groq para formular diagnósticos completos que explican la gravedad del estado general del vehículo y sugieren reparaciones.
+*   **🧠 Caché de Reportes con Session State:** Evita la pérdida del reporte redactado por Groq o la necesidad de regenerarlo al presionar el botón de descarga del PDF.
+*   **🔄 Auto-Limpieza en Historial:** Limpieza automática de la sesión de inspección fotográfica actual tan pronto como el usuario se traslada a la pestaña de Historial de Reportes.
+*   **🗃️ Persistencia Híbrida en la Nube (Supabase):** Guarda el historial de inspección y los archivos PDF resultantes directamente en Supabase (PostgreSQL para datos y Storage para PDFs) con fallback local automático (JSON y archivos locales) si falla la conexión.
+*   **📅 Búsqueda y Filtrado Avanzado:** Filtra y ordena reportes en el historial por matrícula, estado, inspector y filtros de fecha exacta o rango de fechas.
+*   **📄 Exportación Profesional:** Generación dinámica de reportes en PDF que incluyen la tabla de daños (indicando el origen/archivo de cada uno) y un registro fotográfico comparativo (Original vs. YOLO) con formateo seguro a prueba de desbordamientos.
 
 ---
 
@@ -46,24 +54,24 @@ El sistema opera bajo un pipeline secuencial de doble validación para garantiza
 ```
 p3Aplicaciones/
 ├── data/
-│   ├── raw/                    # Datasets descargados de Roboflow
-│   │   ├── dataset1/           # Automobile Damage Detection
-│   │   ├── dataset2/           # Car Damage Detection (Root)
-│   │   └── dataset3/           # Car Damage Assessment
-│   └── dataset_final/          # Dataset fusionado y listo para entrenar
+│   ├── dataset_final/          # Dataset fusionado y listo para entrenar
+│   └── reportes/               # Historial local de archivos PDF y registros JSON
 ├── notebooks/
-│   └── entrenamiento.ipynb     # Notebook de Google Colab
+│   ├── entrenamiento.ipynb     # Notebook de entrenamiento (Google Colab)
+│   └── preparar_entrenamiento_kaggle.ipynb
 ├── models/
-│   └── best.pt                 # Modelo especializado entrenado
+│   └── best.pt                 # Modelo especializado entrenado (YOLOv8)
 ├── app/
 │   ├── main.py                 # Interfaz de usuario Streamlit
 │   ├── inference.py            # Lógica de inferencia YOLOv8 y validación COCO
 │   ├── llm_report.py           # Conexión Groq AI y prompt de diagnóstico
 │   ├── pdf_generator.py        # Generador de reportes PDF profesional
+│   ├── historial.py            # Lógica de persistencia híbrida en Supabase y Local
 │   └── utils.py                # Utilidades de traducción y formateo
 ├── scripts/
 │   └── merge_datasets.py       # Script de fusión de datasets
 ├── .env.example                # Plantilla de variables de entorno
+├── supabase_setup.md           # Guía de configuración para Supabase SQL y Storage
 ├── requirements.txt
 └── README.md
 ```
@@ -108,19 +116,16 @@ pip install -r requirements.txt
    ```bash
    cp .env.example .env
    ```
-2. Abre `.env` y coloca tu API Key de Groq:
+2. Abre `.env` y coloca tu API Key de Groq y credenciales de Supabase:
    ```env
    GROQ_API_KEY=tu_api_key_aqui
+   SUPABASE_URL=https://tu-proyecto-id.supabase.co
+   SUPABASE_KEY=tu-anon-public-key
    ```
-   *(Consigue tu llave gratis en [Groq Console](https://console.groq.com/))*
+   *(Puedes encontrar las credenciales de Supabase en **Settings > API** en tu panel).*
 
-### 4. Fusionar datasets y entrenar (Opcional)
-Si deseas entrenar el modelo tú mismo:
-```bash
-# Descarga los datasets en data/raw/
-python scripts/merge_datasets.py
-```
-Sube la carpeta resultante `data/dataset_final/` a Drive y ejecuta el notebook `notebooks/entrenamiento.ipynb` en Colab. Luego coloca el archivo `best.pt` en la carpeta `models/`.
+### 4. Configurar la Base de Datos
+Sigue los pasos indicados en [supabase_setup.md](file:///c:/Users/Administrador/Desktop/p3Aplicaciones/supabase_setup.md) para habilitar la tabla `reportes` y el bucket `reportes-inspeccion` en Supabase.
 
 ### 5. Ejecutar la Aplicación
 ```bash

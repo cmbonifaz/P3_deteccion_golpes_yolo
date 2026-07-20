@@ -133,5 +133,31 @@
     "justificacion": "El vehículo presenta un total de 5 daños detectados, lo que justifica su clasificación como 'Grave'. Los daños incluyen dos parachoques dañados en la zona central, un cofre dañado en la misma zona, y dos puertas dañadas también en la zona central. La presencia de múltiples daños en componentes estructurales y de seguridad como los parachoques y las puertas, junto con el cofre, indica un impacto significativo en la integridad del vehículo. La combinación de estos daños sugiere que el vehículo ha sufrido un evento de impacto considerable, lo que podría comprometer su seguridad y estabilidad en la carretera. La detección de daños en áreas críticas como los parachoques y las puertas, que son fundamentales para la protección del vehículo y sus ocupantes, refuerza la clasificación de 'Grave'. Por lo tanto, se requiere una inspección y reparación exhaustiva para garantizar la seguridad y el funcionamiento adecuado del vehículo.",
     "pdf_nombre": "reporte_FTHF54_20260712_154923.pdf",
     "pdf_url": "https://crsjpquirnkvzwilpfel.supabase.co/storage/v1/object/public/reportes-inspeccion/reporte_FTHF54_20260712_154923.pdf"
+  },
+  {
+    "id": "1783962120_PDA1746",
+    "timestamp": 1783962120,
+    "fecha_hora": "13/07/2026 12:02:00",
+    "placa": "PDA1746",
+    "marca": "Kia",
+    "modelo": "Rio",
+    "inspector": "Christian",
+    "estado": "Grave",
+    "justificacion": "El vehículo presenta un total de 5 daños detectados, lo que justifica su clasificación como 'Grave'. Los daños incluyen dos parachoques dañados en la zona central, un cofre dañado en la misma zona, y dos puertas dañadas también en la zona central. La presencia de múltiples daños en partes estructurales como los parachoques y las puertas, junto con el cofre, indica un impacto significativo en la integridad del vehículo. La combinación de estos daños sugiere que el vehículo ha sufrido un evento de colisión o impacto severo, lo que podría comprometer la seguridad vial y la conducción. La cantidad y ubicación de los daños detectados justifican la categorización del estado del vehículo como 'Grave', ya que supera el umbral de 5 daños totales y afecta componentes críticos de la carrocería.",
+    "pdf_nombre": "reporte_PDA1746_20260713_120200.pdf",
+    "pdf_url": "https://crsjpquirnkvzwilpfel.supabase.co/storage/v1/object/public/reportes-inspeccion/reporte_PDA1746_20260713_120200.pdf"
+  },
+  {
+    "id": "1784506889_PDF1328",
+    "timestamp": 1784506889,
+    "fecha_hora": "19/07/2026 19:21:29",
+    "placa": "PDF1328",
+    "marca": "Toyota",
+    "modelo": "corolla",
+    "inspector": "Christian",
+    "estado": "Grave",
+    "justificacion": "El vehículo presenta un total de 5 daños detectados, lo que justifica su clasificación como 'Grave'. Los daños incluyen dos parachoques dañados en la zona central, un cofre dañado en la misma zona, y dos puertas dañadas también en la zona central. La presencia de múltiples daños en componentes estructurales y de seguridad como los parachoques y las puertas, junto con el cofre, indica un estado de deterioro significativo. La combinación de estos daños sugiere que el vehículo ha sufrido un impacto o colisión que ha afectado varias partes de su estructura, lo que podría comprometer su seguridad y estabilidad en la carretera. La detección de daños en áreas críticas como los parachoques y las puertas, que son fundamentales para la protección del vehículo y sus ocupantes, refuerza la clasificación de 'Grave'.",
+    "pdf_nombre": "reporte_PDF1328_20260719_192129.pdf",
+    "pdf_url": "https://crsjpquirnkvzwilpfel.supabase.co/storage/v1/object/public/reportes-inspeccion/reporte_PDF1328_20260719_192129.pdf"
   }
 ]

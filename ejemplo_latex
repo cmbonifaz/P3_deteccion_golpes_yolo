@@ -1,0 +1,363 @@
+\documentclass[12pt,a4paper]{article}
+
+% Paquetes
+\usepackage[spanish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{xurl}
+\usepackage{float}
+\usepackage{booktabs}   % mejora visual de las tablas
+\usepackage{array}  
+\usepackage{adjustbox}
+
+\geometry{margin=2.54cm}
+\setstretch{1.5}
+
+% Encabezado y pie de página
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Redes de Computadores}
+\lhead{ESPE}
+\rfoot{\thepage}
+
+% Inicio del documento
+\begin{document}
+
+% =========================
+% PORTADA
+% =========================
+
+\begin{center}
+
+% Logos (reemplazar con rutas reales si se desea)
+\includegraphics[width=5cm]{Imagen1.png} \hfill
+\includegraphics[width=1.75cm]{Imagen2.png}
+
+\vspace{1cm}
+
+{\large \textbf{INGENIERIA EN SOFTWARE}}\\[1cm]
+
+{\large \textbf{REDES DE COMPUTADORES}}\\[2cm]
+
+{\Large \textbf{INFORME DE TAREA}}\\[1cm]
+
+{\large \textbf{Título del Trabajo:}}\\
+Medios de Transmisión: Guiados y No Guiados\\[2cm]
+
+\textbf{Nombre del estudiante:} Christian Bonifaz\\
+\textbf{Nivel:} 5to\\[1cm]
+
+\textbf{Docente:} Ing. Julio Gancino\\
+\textbf{Fecha:} \today
+
+\end{center}
+
+\newpage
+
+\tableofcontents
+
+
+\newpage
+% =========================
+% ACTIVIDAD
+% =========================
+\section{Actividad}
+Investigación sobre medios de transmisión: guiados y no guiados, su análisis comparativo y sus escenarios de uso.
+
+% =========================
+% OBJETIVO
+% =========================
+\section{Objetivo}
+Analizar, comprender y comparar los medios de transmisión guiados y no guiados, identificando sus características técnicas, ventajas, desventajas y aplicaciones en entornos reales de redes de computadoras.
+
+% =========================
+% INTRODUCCIÓN
+% =========================
+\section{Introducción}
+Los medios de transmisión permiten el envío de datos entre dispositivos a través de diferentes 
+
+% =========================
+% DESARROLLO
+% =========================
+\section{Desarrollo}
+
+% -------------------------
+\subsection{Medios Guiados}
+% -------------------------
+
+\subsubsection{Definición}
+Los medios guiados son en los que la señal se transmite a través de un soporte físico concreto, como un cable o fibra, que actúa como guía y contiene la propagación de la señal de un punto a otro.
+
+\subsubsection{Tipos}
+
+\textbf{1. Par Trenzado (Twisted Pair)}\\
+Consiste en dos hilos conductores de cobre aislados individualmente y trenzados entre sí de forma helicoidal. 
+\begin{itemize}
+    \item \textbf{UTP (Unshielded Twisted Pair):} Es el más común en redes LAN domésticas y de oficina, las categorías van desde Cat3 hasta Cat8.
+    \item \textbf{STP (Shielded Twisted Pair):} Incluye una malla o lámina metálica alrededor de los pares para mayor protección contra interferencias electromagnéticas, por lo que se usa en entornos industriales o con alta interferencia.
+\end{itemize}
+
+\textbf{2. Cable Coaxial}\\
+Tiene una estructura en la cual está un conductor de cobre sólido rodeado por un dieléctrico aislante, luego tiene una malla metálica trenzada que actúa como segundo conductor y blindaje, y finalmente tiene una cubierta plástica exterior, esto es una ayuda frente al ruido externo y permite transmitir señales a frecuencias más altas que el par trenzado.\\
+
+\textbf{3. Fibra Óptica}\\
+En lugar de electricidad transmite pulsos de luz a través de un núcleo de vidrio o plástico de alta pureza, en donde la luz viaja por reflexión interna total, rebotando dentro del núcleo sin escapar. 
+\begin{itemize}
+    \item \textbf{Monomodo (SMF):} Núcleo muy estrecho ($\approx$8--10 µm), por lo que solo permite un modo de propagación de luz, permitiendo distancias y velocidades extremas. 
+    \item \textbf{Multimodo (MMF):} Núcleo más ancho ($\approx$50--62.5 µm), por lo que permite múltiples modos de luz simultáneos, lo que introduce algo de dispersión pero es más fácil y barato de conectar.
+\end{itemize}
+
+
+
+
+\subsubsection{Características Técnicas}
+\begin{table}[H]
+\centering
+\small  
+\renewcommand{\arraystretch}{1}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Característica} & \textbf{Par Trenzado} & \textbf{Cable Coaxial} & \textbf{Fibra Óptica} \\
+\hline
+Ancho de banda & Hasta $\sim$2 GHz (Cat8) & Hasta $\sim$1 GHz & Hasta varios THz \\
+\hline
+Velocidad & 10 Mbps -- 40 Gbps & 10 Mbps -- 10 Gbps & 100 Gbps -- varios Tbps \\
+\hline
+Alcance sin repetidor & $\sim$100 m & $\sim$500 m & Hasta 100 km+ \\
+\hline
+Atenuación & Alta a larga distancia & Moderada & Mínima \\
+\hline
+Interferencia EMI & Alta(UTP), baja(STP) & Moderada-baja & Nula \\
+\hline
+\end{tabular}
+\caption{Características técnicas de los medios guiados}
+\end{table}
+
+
+\subsubsection{Ventajas}
+
+\begin{itemize}
+    \item  Al estar la señal en un conductor físico, las condiciones del entorno como lluvia, viento u obstáculos, no afectan la transmisión.
+    \item  Interceptar la señal requiere acceso físico directo al cable, lo que hace mucho más difícil el espionaje pasivo.
+    \item Con fibra óptica, los medios guiados ofrecen capacidades de transmisión que los medios inalámbricos aún no pueden igualar.
+    \item Al no compartir el medio de forma inalámbrica, el comportamiento bajo carga es más predecible y consistente.
+    \item La fibra óptica es completamente inmune a campos electromagnéticos, tormentas eléctricas e interferencias industriales.
+\end{itemize}
+
+\subsubsection{Desventajas}
+
+\begin{itemize}
+    \item El dispositivo debe estar físicamente conectado al cable, lo que limita su movilidad.
+    \item El tendido de cables requiere planificación, obra civil como canaletas, ductos, perforaciones y mano de obra especializada.
+    \item No se puede expandir la red de forma tan ágil como en un entorno inalámbrico.
+    \item Los cables pueden cortarse, deteriorarse por humedad, roedores o aplastamiento.
+    \item En instalaciones grandes, el volumen de cables puede volverse un problema serio de organización, peso, calor y mantenimiento.
+\end{itemize}
+
+\subsubsection{Aplicaciones Reales}
+
+\begin{itemize}
+    \item \textbf{Par trenzado UTP/STP:} Redes LAN empresariales y domésticas (Cat5e, Cat6, Cat6A, Cat8), sistemas de telefonía IP, cámaras de seguridad IP con PoE.
+    \item \textbf{Cable coaxial:} Redes de televisión por cable, sistemas HFC para distribución de internet y televisión por operadoras como Claro o CNT, señales de antena en radiodifusión.
+    \item \textbf{Fibra óptica:} Conexiones dentro de centros de datos, enlaces entre edificios en un campus, redes de almacenamiento.
+\end{itemize}
+
+% Insertar imagen
+%\begin{figure}[h]
+%    \centering
+%    \includegraphics[width=0.8\textwidth]{medios_guiados.png}
+%    \caption{Tipos de medios guiados}
+%\end{figure}
+
+% -------------------------
+\subsection{Medios No Guiados}
+% -------------------------
+
+\subsubsection{Definición}
+Los medios no guiados transportan la información a través del espacio libre mediante ondas electromagnéticas que se propagan sin necesidad de un conductor físico, la señal se irradia desde una antena transmisora y se propaga por el aire o incluso el vacío del espacio exterior, donde puede ser captada por una o múltiples antenas receptoras.
+
+\subsubsection{Tipos}
+\textbf{1. Ondas de Radio}\\
+Abarcan un espectro muy amplio, desde frecuencias muy bajas (VLF) hasta UHF y SHF. 
+\begin{itemize}
+    \item \textbf{Radiodifusión AM/FM:} Gran cobertura, pero baja frecuencia y ancho de banda.
+    \item \textbf{Wi-Fi:} Opera en bandas de 2.4 GHz, 5 GHz y 6 GHz (Wi-Fi 6E/7).
+    \item \textbf{Bluetooth:} Corto alcance($\sim$10--100 m), baja potencia, para periféricos y accesorios.
+    \item \textbf{Redes celulares(4G LTE/5G):} Infraestructura con cobertura regional y nacional.
+    \item \textbf{Zigbee/Z-Wave/LoRa:} Tecnologías de baja potencia para redes IoT y domótica.
+\end{itemize}
+
+\textbf{2. Microondas Terrestres}\\
+Operan en el rango de 1 GHz a 40 GHz aproximadamente, se usan en enlaces punto a punto entre antenas parabólicas instaladas en torres, edificios altos o montañas, también requieren línea de visión directa entre los dos extremos.\\
+
+\textbf{3. Microondas Satelitales}\\
+Usan satélites en órbita como repetidores.
+\begin{itemize}
+    \item \textbf{GEO (Geoestacionaria, $\sim$36.000 km):} Alta latencia ($\sim$600 ms), cobertura hemisférica, y es usado en TV satelital e internet en zonas remotas.
+    \item \textbf{LEO (Órbita Baja, 500--2.000 km):} Baja latencia ($\sim$20--40 ms), requiere constelaciones de miles de satélites.
+    \item \textbf{MEO (Órbita Media):} Sistemas de navegación GPS trabajan en esta órbita.\\
+\end{itemize}
+
+\textbf{4. Infrarrojos}\\
+Usan longitudes de onda entre 700 nm y 1 mm, requieren línea de visión directa y no atraviesan paredes, hoy predomina en controles remotos y sensores industriales.\\
+
+\textbf{5. FSO (Free Space Optics)}\\
+Tecnología emergente que usa láseres o LEDs de alta potencia para transmitir datos a través del aire libre, ya que puede alcanzar hasta 10 Gbps en distancias de hasta 2--3 km en condiciones óptimas.
+
+\subsubsection{Características Técnicas}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Característica} & \textbf{Wi-Fi} & \textbf{Microondas Terr.} & \textbf{Satelital GEO} & \textbf{Celular 5G} & \textbf{Infrarrojo} \\
+\hline
+Frecuencia & 2.4--6 GHz & 1--40 GHz & 4--30 GHz & Sub-6 GHz/mmWave & 300 GHz -- 400 THz \\
+\hline
+Velocidad & Hasta 9.6 Gbps & Hasta 10 Gbps & 25--150 Mbps & Hasta 20 Gbps & Hasta $\sim$4 Mbps \\
+\hline
+Alcance & 30--150 m & 1--80 km & Global & Km por celda & $<$ 5 m \\
+\hline
+Interferencia & Alta & Moderada (clima) & Alta (lluvia) & Moderada & Baja, LOS estricto \\
+\hline
+
+\end{tabular}%
+}
+\caption{Características técnicas de los medios no guiados}
+\end{table}
+
+\subsubsection{Ventajas}
+
+\begin{itemize}
+    \item Los usuarios pueden desplazarse libremente sin perder conectividad.
+    \item No requieren obra civil ni tendido de cables. 
+    \item Permiten llevar conectividad a lugares donde el cableado sería complicado.
+    \item Cubrir un área geográfica amplia con tecnología celular o satelital resulta mucho más económico que cablear físicamente esa misma área.
+    \item Agregar nuevos dispositivos no requiere infraestructura adicional hasta cierto límite de capacidad.
+\end{itemize}
+
+\subsubsection{Desventajas}
+
+\begin{itemize}
+    \item La señal se propaga en todas las direcciones y puede ser captada por cualquier receptor dentro del alcance, por lo cual se exige capas adicionales de seguridad (WPA3, VPNs, cifrado end-to-end).
+    \item Paredes, microondas domésticos, otros routers y condiciones climáticas degradan la señal de forma impredecible.
+    \item Las empresas deben licenciar el espectro, lo que implica costos y restricciones.
+    \item El ancho de banda inalámbrico se divide entre todos los usuarios activos, entonces a mayor número de dispositivos conectados, menor velocidad disponible por usuario.
+
+\end{itemize}
+
+\subsubsection{Aplicaciones Reales}
+
+\begin{itemize}
+    \item \textbf{Wi-Fi:} Redes domésticas, hoteles, aeropuertos, universidades y zonas de cobertura pública.
+    \item \textbf{Bluetooth / Zigbee / Z-Wave:} Auriculares inalámbricos, smartwatches, domótica, sensores de hogar inteligente, redes de sensores industriales.
+    \item \textbf{Redes celulares 4G/5G:} Comunicación móvil universal, internet móvil y banda ancha fija inalámbrica.
+    \item \textbf{Satelital LEO (Starlink):} Internet de alta velocidad en zonas rurales, marítimas y aeronáuticas.
+\end{itemize}
+
+% Insertar imagen
+%\begin{figure}[h]
+%    \centering
+%    \includegraphics[width=0.8\textwidth]{medios_noguiados.png}
+%    \caption{Tipos de medios no guiados}
+%\end{figure}
+
+% -------------------------
+\subsection{Análisis Comparativo}
+% -------------------------
+
+\subsubsection{Tabla Comparativa General}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1}
+\begin{tabular}{|l|p{5cm}|p{5cm}|}
+\hline
+\textbf{Criterio} & \textbf{Medios Guiados} & \textbf{Medios No Guiados} \\
+\hline
+Soporte de transmisión & Cable físico (cobre o vidrio) & Espacio libre (aire, vacío) \\
+\hline
+Velocidad máxima & Tbps (fibra óptica) & Hasta $\sim$20 Gbps (5G mmWave) \\
+\hline
+Latencia típica & $<$ 1 ms (fibra) & 1 ms -- 600 ms (según tecnología) \\
+\hline
+Alcance sin repetidor & Limitado (100 m -- 100 km) & Ilimitado (satélite global) \\
+\hline
+Interferencia & Baja a moderada & Alta (espectro compartido, clima) \\
+\hline
+Seguridad & Alta (acceso físico requerido) & Baja-moderada (señal en el aire) \\
+\hline
+Movilidad del usuario & Nula & Total \\
+\hline
+
+Escalabilidad & Limitada (requiere más cable) & Ágil hasta cierto límite \\
+\hline
+Regulación requerida & No & Sí (licencias de espectro) \\
+\hline
+Consumo energético & Bajo & Mayor (radiotransmisores) \\
+\hline
+\end{tabular}
+\caption{Comparativa general entre medios guiados y no guiados}
+\end{table}
+
+\subsubsection{Escenarios de Uso}
+
+\textbf{Para medios guiados cuando:}
+\begin{itemize}
+    \item Se necesita máxima velocidad y estabilidad garantizada, como en centros de datos, servidores de producción o sistemas de trading financiero donde cada milisegundo importa.
+    \item El entorno exige alta seguridad en la transmisión, como instalaciones bancarias, gubernamentales, militares o industriales.
+    \item La infraestructura es permanente y los dispositivos son fijos, como estaciones de trabajo en oficinas, equipos de producción o sistemas de monitoreo en hospitales.
+    \item El entorno tiene alta interferencia electromagnética, como plantas industriales con maquinaria pesada, donde la fibra óptica es la única opción confiable.
+\end{itemize}
+
+\textbf{Para no guiados cuando:}
+\begin{itemize}
+    \item Se requiere movilidad del usuario o dispositivo, como smartphones, tablets, vehículos 
+\end{itemize}
+
+
+% =========================
+% CONCLUSIONES
+% =========================
+\section{Conclusiones}
+Los medios guiados ofrecen estabilidad, seguridad y alto rendimiento, su principal limitación es la rigidez física de la infraestructura, que restringe la movilidad y eleva los costos de instalación.
+
+
+\section{Recomendaciones}
+Para redes inalámbricas internas, se recomienda cambiar a Wi-Fi 6 o Wi-Fi 6E en entornos con alta densidad de dispositivos, como aulas, auditorios.
+
+
+% =========================
+% BIBLIOGRAFÍA
+% =========================
+\section{Bibliografía}
+
+GeeksforGeeks. (2024). \textit{Types of transmission media}.
+\url{https://www.geeksforgeeks.org/computer-networks/types-transmission-media/}
+
+Universidad Politécnica de Cartagena. (s.f.). \textit{Medios de transmisión
+no guiados} [Material de curso OCW].
+\url{https://ocw.bib.upct.es/pluginfile.php/6627/mod_resource/content/1/Medios_tx_no_guiados.pdf}
+
+Uninets. (s.f.). \textit{Transmission media in computer networks}.
+\url{https://www.uninets.com/blog/transmission-media-in-computer-networks}
+
+Redes de Computadoras. (2014). \textit{Medios guiados}.
+\url{https://redes-de-computadoras35.webnode.mx/medios-de-transmision/medios-guiados/}
+
+EcuRed. (s.f.). \textit{Medios guiados y no guiados}.
+\url{https://www.ecured.cu/Medios_Guiados_y_no_Guiados}
+
+Chaudhary, S. (2021, diciembre). \textit{Types of transmission media: Guided and
+unguided}. BeginnersBook.
+\url{https://beginnersbook.com/2021/12/types-of-transmission-media-guided-and-unguided/}
+
+\end{document}
